@@ -23,14 +23,14 @@ src/inference.py          predicción de una imagen
 src/compare_runs.py       tabla comparativa de corridas
 src/common.py, models.py, metrics.py
 notebooks/Colab_Mamografias.ipynb   flujo completo en Google Colab
-docs/                     bitácora, registro de IA, hipótesis, plantilla del informe, guía del día 7
+docs/                     informe, hipótesis, bitácora, registro de IA, tabla de etiquetas, guía de Colab, guía del día 7
 ```
 
 ## Instalación
 ```bash
 pip install -r requirements.txt
 ```
-Se recomienda Google Colab con GPU (Entorno de ejecución → Cambiar tipo → T4 GPU).
+Se recomienda Google Colab con GPU (Entorno de ejecución → Cambiar tipo → T4 GPU). Paso a paso en `docs/guia_colab.md`.
 
 ## Datos
 **CBIS-DDSM** (TCIA): https://www.cancerimagingarchive.net/collection/cbis-ddsm/ — licencia CC BY 3.0 (verificar en la página).

@@ -29,6 +29,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 | 2026-11-18 | Al probar el pipeline con un mini dataset sintético, `evaluate.py --threshold 0.3` sobrescribía `threshold.json` y `eval_val/`: la app y la evaluación final habrían usado ese umbral sin que nadie lo notara. | Dejarlo y "acordarse" de volver a correr · guardar el umbral fijo aparte | Un umbral fijo es exploración: se guarda en `eval_<split>_umbral_<valor>/` y no toca `threshold.json`. | commit `a8e9ccb` | |
 | 2026-11-18 | ¿Cómo diseñar el experimento controlado? | Cambiar modelo y aumentos a la vez · cambiar solo el lr · cambiar solo los aumentos | R1 (ResNet18 con aumentos) vs R2 (igual, sin aumentos). Se mantiene modelo, datos, semilla, lr, épocas y batch. | `docs/hipotesis.md` (H1), commit `262adc1` | <<PENDIENTE: tras R1/R2>> |
 | 2026-11-18 | ¿Con qué criterio se fija el umbral? | 0,5 fijo · Youden · sensibilidad objetivo 0,90 · sensibilidad objetivo 0,95 | Sensibilidad ≥ 0,90 en validación: un falso negativo (maligna marcada como benigna) es peor que un falso positivo (estudio extra). 0,95 se descartó para no disparar los falsos positivos con un dataset pequeño. | `docs/hipotesis.md` (H2), commit `262adc1` | <<PENDIENTE: tras evaluar en validación>> |
+<!-- filas-jose: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de José:** repositorio y su configuración, hipótesis H1/H2, prueba del pipeline con datos sintéticos y corrección de `evaluate.py`, ejecución del notebook (R0/R1/R2), elección del umbral y del modelo ganador.
 
@@ -38,7 +39,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 
 | Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
 |---|---|---|---|---|---|
-| | | | | | |
+<!-- filas-andres: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Andrés:** <<PENDIENTE: la escribe Andrés>>
 
@@ -48,6 +49,6 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 
 | Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
 |---|---|---|---|---|---|
-| | | | | | |
+<!-- filas-miguel: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Miguel:** <<PENDIENTE: la escribe Miguel>>
