@@ -117,13 +117,16 @@ def main():
     va = df[df.split == "val"].reset_index(drop=True)
     y_va, s_va, _ = scores_for(va, cfg, model, device)
     if args.threshold is not None:
+        # Umbral fijo = exploración ("¿qué pasa si bajo el umbral?"). NO se guarda en threshold.json
+        # para no cambiar en silencio el umbral oficial que usan la app y la evaluación final.
         thr, how = args.threshold, "fijo"
+        print(f"Umbral FIJO de exploración: {thr:.4f} (threshold.json no se modifica)")
     else:
         thr = select_threshold(y_va, s_va, args.strategy, args.target_sens)
         how = args.strategy + (f" (objetivo sens={args.target_sens})" if args.strategy == "sens" else "")
-    (run / "threshold.json").write_text(json.dumps(
-        {"threshold": thr, "metodo": how, "elegido_en": "val", "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}, indent=2))
-    print(f"Umbral elegido en validación: {thr:.4f} ({how})")
+        (run / "threshold.json").write_text(json.dumps(
+            {"threshold": thr, "metodo": how, "elegido_en": "val", "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}, indent=2))
+        print(f"Umbral elegido en validación: {thr:.4f} ({how})")
 
     # 2) Partición a reportar
     if args.split == "test":
@@ -135,7 +138,8 @@ def main():
         ev, y, s = va, y_va, s_va
         _, _, ms = scores_for(va.head(64), cfg, model, device)
 
-    out = run / f"eval_{args.split}"
+    # Con umbral fijo los resultados van a otra carpeta para no pisar la evaluación oficial
+    out = run / (f"eval_{args.split}" if args.threshold is None else f"eval_{args.split}_umbral_{thr:.2f}")
     out.mkdir(exist_ok=True)
     m = binary_metrics(y, s, thr)
     m["ms_por_imagen"] = round(ms, 2)

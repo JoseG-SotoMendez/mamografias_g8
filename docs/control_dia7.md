@@ -30,7 +30,7 @@ python src/inference.py --run runs/R1_resnet18_aug --image <ruta de un recorte>
 ## 5. Modificaciones en vivo que pueden pedir
 | Pedido | Cómo |
 |---|---|
-| Cambiar el umbral | `python src/evaluate.py --run runs/R1_resnet18_aug --split val --threshold 0.3` y comparar la matriz de confusión |
+| Cambiar el umbral | `python src/evaluate.py --run runs/R1_resnet18_aug --split val --threshold 0.3` y comparar la matriz de confusión de `eval_val_umbral_0.30/` con la de `eval_val/` (el umbral fijo **no** modifica `threshold.json`). Nunca con `--split test`. |
 | Elegir umbral para otra sensibilidad | `--strategy sens --target-sens 0.95` |
 | Localizar un falso negativo | abrir `runs/<run>/eval_val/falsos_negativos.csv` / `.png`; mostrar la imagen y su puntuación |
 | Revisar identificadores | `check_leakage.py --paciente P_xxxxx`; buscar en `data/splits/lesiones.csv` |
