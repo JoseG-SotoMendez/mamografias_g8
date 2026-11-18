@@ -1,18 +1,53 @@
 # Bitácora del proceso — Grupo 8
 
-Una entrada por cada problema o decisión relevante. Escribirla **el mismo día** (las fechas y los commits deben coincidir).
+Una entrada por cada problema o decisión relevante, escrita **el mismo día** (la fecha de la fila y la del commit deben coincidir).
 Formato exigido: fecha · dificultad · alternativas · decisión · evidencia · contribución individual.
 
-| Fecha | Integrante | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia (commit, archivo, figura) | Revisión posterior |
-|---|---|---|---|---|---|---|
-| 2026-11-__ | | Elegir fuente de datos | CBIS-DDSM DICOM (TCIA), CBIS-DDSM JPEG (Kaggle), VinDr-Mammo, INbreast | | | |
-| 2026-11-__ | | Qué hacer con BENIGN_WITHOUT_CALLBACK | incluir como benigna / excluir | | | |
-| 2026-11-__ | | Masas, calcificaciones o ambas | | | | |
-| 2026-11-__ | | Cómo dividir sin fuga | por lesión / por imagen / por paciente | Por paciente (exigido) | `src/check_leakage.py` | |
-| 2026-11-__ | | Estrategia de umbral | 0,5 fijo / Youden / sensibilidad objetivo | | `runs/*/threshold.json` | |
-| | | | | | | |
+Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git pull`). La columna "Revisión posterior" se llena cuando los resultados confirman o tumban la decisión.
 
-## Contribución individual (resumen)
-- **José Gil Soto Méndez:**
-- **Andrés Alfonso Luna Moreno:**
-- **Miguel Francisco Guerra Negrete:**
+## Decisiones de grupo (resumen)
+
+| Decisión | Valor | Quién la documenta y defiende | Dónde |
+|---|---|---|---|
+| Fuente de datos | CBIS-DDSM, versión JPEG de Kaggle (`awsaf49/cbis-ddsm-breast-cancer-image-dataset`) | José | esta bitácora, `notebooks/Colab_Mamografias.ipynb` |
+| Tipo de lesión | Masas + calcificaciones (`--lesion both`) | Andrés | `docs/tabla_etiquetas.md` |
+| `BENIGN_WITHOUT_CALLBACK` | Benigna (0) (`--bwc benign`) | Andrés | `docs/tabla_etiquetas.md` |
+| División | Por paciente, 70/15/15, semilla 42 (`StratifiedGroupKFold`) | Andrés | `src/prepare_data.py`, `src/check_leakage.py`, `data/splits/lesiones.csv` |
+| Experimento controlado | R1 vs R2: solo cambian los aumentos | José | `docs/hipotesis.md` (H1) |
+| Umbral | El más alto con sensibilidad ≥ 0,90, elegido en validación | José | `docs/hipotesis.md` (H2), `runs/*/threshold.json` |
+| Selección de errores a analizar | <<PENDIENTE: Miguel>> | Miguel | `docs/analisis_errores.md` |
+| Validaciones de la interfaz | <<PENDIENTE: Miguel>> | Miguel | `app.py`, capturas |
+
+---
+
+## José Gil Soto Méndez
+
+| Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
+|---|---|---|---|---|---|
+| 2026-11-18 | El PC tiene configurada globalmente otra cuenta de Git (`jsotomendez`, correo universitario) y el Administrador de credenciales de Windows guarda esa cuenta para github.com. Los commits iban a salir con el autor equivocado. | Cambiar la configuración global · borrar la credencial guardada · configurar identidad solo en este repo | Identidad `JoseG-SotoMendez` **solo a nivel repo** (`git config user.name/user.email` sin `--global`) y URL del remoto con el usuario explícito, para que el administrador de credenciales no use la otra cuenta. No se borró nada. | `git config --local --list`; autor de los commits en `git log` | |
+| 2026-11-18 | ¿De dónde sacamos las imágenes? | DICOM originales de TCIA (≈160 GB la colección completa, requiere NBIA Data Retriever) · solo "ROI and cropped" de TCIA · JPEG de Kaggle derivado de TCIA | JPEG de Kaggle: cabe en Colab, ya trae `dicom_info.csv` para ubicar cada recorte y conserva los CSV oficiales con `pathology`. El código también soporta `--source tcia` si hay que volver al original. | `src/prepare_data.py` (`resolve_kaggle`), celda 3 del notebook | <<PENDIENTE: confirmar tamaño real de descarga y cuántos recortes no se encontraron (`descartadas.csv`)>> |
+| 2026-11-18 | Al probar el pipeline con un mini dataset sintético, `evaluate.py --threshold 0.3` sobrescribía `threshold.json` y `eval_val/`: la app y la evaluación final habrían usado ese umbral sin que nadie lo notara. | Dejarlo y "acordarse" de volver a correr · guardar el umbral fijo aparte | Un umbral fijo es exploración: se guarda en `eval_<split>_umbral_<valor>/` y no toca `threshold.json`. | commit `a8e9ccb` | |
+| 2026-11-18 | ¿Cómo diseñar el experimento controlado? | Cambiar modelo y aumentos a la vez · cambiar solo el lr · cambiar solo los aumentos | R1 (ResNet18 con aumentos) vs R2 (igual, sin aumentos). Se mantiene modelo, datos, semilla, lr, épocas y batch. | `docs/hipotesis.md` (H1), commit `262adc1` | <<PENDIENTE: tras R1/R2>> |
+| 2026-11-18 | ¿Con qué criterio se fija el umbral? | 0,5 fijo · Youden · sensibilidad objetivo 0,90 · sensibilidad objetivo 0,95 | Sensibilidad ≥ 0,90 en validación: un falso negativo (maligna marcada como benigna) es peor que un falso positivo (estudio extra). 0,95 se descartó para no disparar los falsos positivos con un dataset pequeño. | `docs/hipotesis.md` (H2), commit `262adc1` | <<PENDIENTE: tras evaluar en validación>> |
+
+**Contribución individual de José:** repositorio y su configuración, hipótesis H1/H2, prueba del pipeline con datos sintéticos y corrección de `evaluate.py`, ejecución del notebook (R0/R1/R2), elección del umbral y del modelo ganador.
+
+---
+
+## Andrés Alfonso Luna Moreno
+
+| Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
+|---|---|---|---|---|---|
+| | | | | | |
+
+**Contribución individual de Andrés:** <<PENDIENTE: la escribe Andrés>>
+
+---
+
+## Miguel Francisco Guerra Negrete
+
+| Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
+|---|---|---|---|---|---|
+| | | | | | |
+
+**Contribución individual de Miguel:** <<PENDIENTE: la escribe Miguel>>
