@@ -76,9 +76,24 @@ Validación: 521 lesiones (222 malignas, 299 benignas) de 225 pacientes. Cada co
 **Ganador: R1.** Tiene el mayor ROC-AUC y, con la misma sensibilidad que las otras dos (≈ 0,90, unos 22 cánceres sin marcar de 222), es la que menos falsas alarmas da: 144 benignas marcadas frente a 174 de R2 y 191 de R0. La transferencia de aprendizaje le gana a la red desde cero por 0,125 de AUC; los aumentos suman 0,037 más. La elección se hizo solo con validación; la prueba no se ha mirado.
 
 ### 5.3 Resultado final en prueba (una sola vez)
-<<PENDIENTE: matriz de confusión, sensibilidad maligna, especificidad, precisión, F1, ROC-AUC del ganador en prueba (`eval_test/metricas.json`) y la línea de `registro_uso_test.txt`>>
+Se ejecutó **una sola vez** (`registro_uso_test.txt`: `2026-11-18 11:53:02 umbral=0.0664 metodo=sens (objetivo sens=0.9)`), con R1 y el umbral 0,066 fijados en validación. Prueba: 518 lesiones (200 malignas, 318 benignas) de 226 pacientes que el modelo nunca vio.
 
-Efecto del umbral: <<PENDIENTE: `tabla_umbrales.csv` / `umbral_vs_metricas.png` — qué pasa con FN y FP al moverlo>>. Curvas y sobreajuste: <<PENDIENTE: `curvas.png`>>. ¿Se confirmaron H1 y H2? <<PENDIENTE>>
+| | Predice benigna | Predice maligna |
+|---|---|---|
+| **Es benigna** (318) | VN = 146 | FP = 172 |
+| **Es maligna** (200) | FN = 22 | VP = 178 |
+
+| Sensibilidad maligna | Especificidad | Precisión | F1 | ROC-AUC | Exactitud |
+|---|---|---|---|---|---|
+| 0,890 | 0,459 | 0,509 | 0,647 | 0,788 | 0,625 |
+
+En palabras: de cada 100 lesiones malignas, el modelo deja pasar 11 como benignas; a cambio, marca como sospechosas a más de la mitad de las benignas (172 de 318). Todo bajó un poco respecto a validación (AUC 0,819 → 0,788; sensibilidad 0,901 → 0,890; especificidad 0,518 → 0,459), que es lo esperable cuando modelo y umbral se eligieron mirando validación.
+
+**Efecto del umbral (validación, R1, `tabla_umbrales.csv`).** A 0,5 el modelo solo atrapa 0,604 de las malignas (88 FN) con especificidad 0,853; a 0,2, 0,802 (44 FN) con 0,696; al umbral elegido (0,066), 0,901 (22 FN) con 0,518. Cada cáncer adicional que se atrapa por debajo de 0,2 cuesta en promedio unas cuatro falsas alarmas más. Es el precio que aceptamos para que un FN sea raro.
+
+**Curvas y sobreajuste (`curvas.png`, `log.csv`).** R2 es el caso de libro: la pérdida de entrenamiento cae a 0,028 mientras la de validación sube a 0,906, y su mejor AUC fue en la primera época. R1 sobreajusta más despacio: la brecha crece de 0,11 (época 6) a 0,35 (época 12), pero el AUC de validación sigue mejorando hasta la época 12.
+
+**¿Se confirmaron las hipótesis?** H1, parcialmente: los aumentos subieron el AUC (+0,037) y retrasaron la mejor época (12 vs 1), pero la forma en que medimos el sobreajuste (brecha en la mejor época de cada modelo) no lo mostró. Comparando a igual época, el efecto es claro. H2, sí: el umbral quedó muy por debajo de 0,5 (0,066), la especificidad bajó a 0,518 en validación y la sensibilidad en prueba fue 0,890, dentro del rango 0,80–0,90 predicho.
 
 ### 5.4 Análisis de errores  *(redacta: Miguel)*
 <<PENDIENTE: al menos 4 falsos negativos y 4 falsos positivos reales con puntuación, tipo de lesión, `subtlety`, `assessment` e hipótesis de la causa; ver `docs/analisis_errores.md`>>
