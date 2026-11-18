@@ -1,0 +1,11 @@
+torch>=2.1
+torchvision>=0.16
+numpy
+pandas
+scikit-learn>=1.1
+matplotlib
+Pillow
+pydicom
+gradio>=4.0
+tabulate
+kagglehub

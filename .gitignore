@@ -1,0 +1,28 @@
+data/*
+!data/splits/
+data/splits/*
+!data/splits/lesiones.csv
+!data/splits/resumen.json
+runs/**/best.pt
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+kaggle.json
+
+# Material interno de preparación (no es entregable; se comparte aparte)
+estudio/
+video/
+PROMPT_GOAL.md
+
+# Datos e imágenes derivadas del dataset: nunca al repositorio
+*.dcm
+*.pt
+*.pth
+reports/eda/ejemplos_*.png
+runs/**/falsos_*.png
+
+# Entornos y secretos
+.venv/
+venv/
+.env
+.claude/
