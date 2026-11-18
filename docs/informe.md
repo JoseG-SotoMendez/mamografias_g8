@@ -89,7 +89,7 @@ Se ejecutó **una sola vez** (`registro_uso_test.txt`: `2026-11-18 11:53:02 umbr
 
 En palabras: de cada 100 lesiones malignas, el modelo deja pasar 11 como benignas; a cambio, marca como sospechosas a más de la mitad de las benignas (172 de 318). Todo bajó un poco respecto a validación (AUC 0,819 → 0,788; sensibilidad 0,901 → 0,890; especificidad 0,518 → 0,459), que es lo esperable cuando modelo y umbral se eligieron mirando validación.
 
-**Efecto del umbral (validación, R1, `tabla_umbrales.csv`).** A 0,5 el modelo solo atrapa 0,604 de las malignas (88 FN) con especificidad 0,853; a 0,2, 0,802 (44 FN) con 0,696; al umbral elegido (0,066), 0,901 (22 FN) con 0,518. Cada cáncer adicional que se atrapa por debajo de 0,2 cuesta en promedio unas cuatro falsas alarmas más. Es el precio que aceptamos para que un FN sea raro.
+**Efecto del umbral (validación, R1, `tabla_umbrales.csv`).** A 0,5 el modelo solo atrapa 0,604 de las malignas (88 FN) con especificidad 0,853; a 0,2, 0,802 (44 FN) con 0,696; al umbral elegido (0,066), 0,901 (22 FN) con 0,518. Bajar de 0,2 a 0,066 atrapa 22 cánceres más a cambio de 53 falsas alarmas más: unas 2,4 por cada cáncer rescatado. Es el precio que aceptamos para que un FN sea raro.
 
 **Curvas y sobreajuste (`curvas.png`, `log.csv`).** R2 es el caso de libro: la pérdida de entrenamiento cae a 0,028 mientras la de validación sube a 0,906, y su mejor AUC fue en la primera época. R1 sobreajusta más despacio: la brecha crece de 0,11 (época 6) a 0,35 (época 12), pero el AUC de validación sigue mejorando hasta la época 12.
 
