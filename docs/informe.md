@@ -45,23 +45,35 @@ Se entrenaron tres corridas con la misma partición, semilla 42, pérdida `BCEWi
 
 | Corrida | Modelo | Preentrenado | Aumentos | lr | Épocas máx. (mejor) | Batch | Optimizador | Semilla | Tiempo |
 |---|---|---|---|---|---|---|---|---|---|
-| R0 | CNN pequeña (4 bloques conv, ~0,1 M parámetros) | no | sí | 1e-3 | 25 (<<PENDIENTE>>) | 32 | AdamW | 42 | <<PENDIENTE>> |
-| R1 | ResNet18 (~11 M parámetros) | ImageNet | sí | 1e-4 | 15 (<<PENDIENTE>>) | 32 | AdamW | 42 | <<PENDIENTE>> |
-| R2 | ResNet18 | ImageNet | **no** | 1e-4 | 15 (<<PENDIENTE>>) | 32 | AdamW | 42 | <<PENDIENTE>> |
+| R0 | CNN pequeña (4 bloques conv, 98.049 parámetros) | no | sí | 1e-3 | 25 (5; parada en 10) | 32 | AdamW | 42 | 3,7 min |
+| R1 | ResNet18 (11.177.025 parámetros) | ImageNet | sí | 1e-4 | 15 (12) | 32 | AdamW | 42 | 5,8 min |
+| R2 | ResNet18 | ImageNet | **no** | 1e-4 | 15 (1; parada en 6) | 32 | AdamW | 42 | 1,9 min |
 
 **R0 como línea base.** Una red pequeña entrenada desde cero marca el piso: si la transferencia de aprendizaje no la supera con claridad, algo anda mal en el pipeline o los datos no alcanzan.
 
 **Experimento controlado (R1 vs R2).** La única decisión que cambia es la bandera `--aug`. Todo lo demás (modelo, pesos iniciales, datos, semilla, lr, épocas, batch) se mantiene, así que cualquier diferencia se puede atribuir a los aumentos y no a una mezcla de cambios. Lo esperado está en H1.
 
-**Hardware.** <<PENDIENTE: GPU, versión de PyTorch y tiempos, de `config.json`>>
+**Hardware.** Google Colab con GPU Tesla T4 (15 GB), PyTorch 2.14.1+cu130, Python 3.13; ~22 s por época. Las tres corridas usan el código del commit `a73c475` (registrado en cada `config.json`).
+
+**Lo que se vio al entrenar.** R0 fue inestable con lr = 1e-3: en la época 8 su AUC de validación cayó a 0,47 y a 0,5 llamó benignas a todas las lesiones; la parada temprana conservó la época 5 (0,694). R2, sin aumentos, bajó la pérdida de entrenamiento de 0,595 a 0,028 en seis épocas mientras la de validación subía de 0,567 a 0,906: memorizó. R1 bajó más despacio (0,24 en la época 15) y su mejor AUC llegó en la época 12.
 
 ## 5. Evaluación  *(redacta: José, salvo 5.4 que redacta Miguel)*
 
 ### 5.1 Umbral
-El umbral se elige **solo en validación**: el más alto que logra sensibilidad maligna ≥ 0,90 (`evaluate.py --strategy sens --target-sens 0.90`) y se guarda en `threshold.json`. La salida del modelo es una **puntuación** (sigmoide de un logit), no una probabilidad calibrada: un 0,7 no significa "70 % de probabilidad de cáncer", solo que el modelo la ordena por encima de un 0,6. Por eso el umbral se fija mirando el compromiso sensibilidad/especificidad y no leyendo la puntuación como riesgo. <<PENDIENTE: valor del umbral elegido>>
+El umbral se elige **solo en validación**: el más alto que logra sensibilidad maligna ≥ 0,90 (`evaluate.py --strategy sens --target-sens 0.90`) y se guarda en `threshold.json`. La salida del modelo es una **puntuación** (sigmoide de un logit), no una probabilidad calibrada: un 0,7 no significa "70 % de probabilidad de cáncer", solo que el modelo la ordena por encima de un 0,6. Por eso el umbral se fija mirando el compromiso sensibilidad/especificidad y no leyendo la puntuación como riesgo.
+
+Para R1 el umbral quedó en **0,066**. Que el corte esté tan lejos de 0,5 confirma lo anterior: las puntuaciones de R1 se amontonan cerca de 0 y no se pueden leer como probabilidad.
 
 ### 5.2 Comparación en validación
-<<PENDIENTE: pegar `reports/comparacion_val.md` y escoger el ganador con su justificación (ROC-AUC y sensibilidad/especificidad al umbral elegido)>>
+Validación: 521 lesiones (222 malignas, 299 benignas) de 225 pacientes. Cada corrida con su propio umbral para sensibilidad ≥ 0,90 (`reports/comparacion_val.md`):
+
+| Corrida | ROC-AUC | Umbral | Sensibilidad | Especificidad | Precisión | F1 | FN | FP |
+|---|---|---|---|---|---|---|---|---|
+| R0 CNN pequeña | 0,694 | 0,378 | 0,905 | 0,361 | 0,513 | 0,655 | 21 | 191 |
+| **R1 ResNet18 + aumentos** | **0,819** | 0,066 | 0,901 | **0,518** | **0,581** | **0,707** | 22 | **144** |
+| R2 ResNet18 sin aumentos | 0,782 | 0,156 | 0,901 | 0,418 | 0,535 | 0,671 | 22 | 174 |
+
+**Ganador: R1.** Tiene el mayor ROC-AUC y, con la misma sensibilidad que las otras dos (≈ 0,90, unos 22 cánceres sin marcar de 222), es la que menos falsas alarmas da: 144 benignas marcadas frente a 174 de R2 y 191 de R0. La transferencia de aprendizaje le gana a la red desde cero por 0,125 de AUC; los aumentos suman 0,037 más. La elección se hizo solo con validación; la prueba no se ha mirado.
 
 ### 5.3 Resultado final en prueba (una sola vez)
 <<PENDIENTE: matriz de confusión, sensibilidad maligna, especificidad, precisión, F1, ROC-AUC del ganador en prueba (`eval_test/metricas.json`) y la línea de `registro_uso_test.txt`>>
