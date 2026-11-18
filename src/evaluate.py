@@ -145,7 +145,9 @@ def main():
     m["ms_por_imagen"] = round(ms, 2)
     m["dispositivo"] = str(device)
     (out / "metricas.json").write_text(json.dumps(m, indent=2))
-    table = threshold_table(y, s, sorted(set([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, round(thr, 4)])))
+    # El umbral elegido va SIN redondear: redondeado a 4 decimales (0.0664 en vez de 0.06638) la fila
+    # contaba 199 TP en vez de 200 y no coincidía con metricas.json.
+    table = threshold_table(y, s, sorted(set([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, thr])))
     pd.DataFrame(table).to_csv(out / "tabla_umbrales.csv", index=False)
 
     plot_confusion(m, out / "matriz_confusion.png", f"{run.name} - {args.split} (umbral {thr:.3f})")
