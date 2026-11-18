@@ -40,8 +40,19 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def find_files(root: Path, pattern: str, subdir: str = "csv"):
+    """Busca primero en root/<subdir> (estructura de Kaggle) y solo si no hay nada recorre todo el árbol.
+    rglob sobre las miles de carpetas de jpeg/ en el disco montado de Colab tardaba ~3 min por búsqueda."""
+    direct = root / subdir
+    if direct.is_dir():
+        hits = sorted(direct.glob(pattern))
+        if hits:
+            return hits
+    return sorted(root.rglob(pattern))
+
+
 def load_descriptions(root: Path) -> pd.DataFrame:
-    csvs = sorted(p for p in root.rglob("*case_description*.csv"))
+    csvs = find_files(root, "*case_description*.csv")
     if not csvs:
         sys.exit(f"No se encontraron CSV '*case_description*.csv' dentro de {root}")
     frames = []
@@ -66,13 +77,16 @@ def series_uid_from_path(p: str):
 
 
 def resolve_kaggle(df: pd.DataFrame, root: Path) -> pd.Series:
-    info_files = list(root.rglob("dicom_info.csv"))
+    info_files = find_files(root, "dicom_info.csv")
     if not info_files:
         sys.exit("Fuente kaggle: no se encontró dicom_info.csv")
     info = pd.read_csv(info_files[0])
     info = info[info["SeriesDescription"].astype(str).str.contains("cropped", case=False)]
-    jpeg_dirs = [p for p in root.rglob("jpeg") if p.is_dir()]
-    jpeg_root = jpeg_dirs[0] if jpeg_dirs else root
+    if (root / "jpeg").is_dir():
+        jpeg_root = root / "jpeg"
+    else:
+        jpeg_dirs = [p for p in root.rglob("jpeg") if p.is_dir()]
+        jpeg_root = jpeg_dirs[0] if jpeg_dirs else root
     mapping = {}
     for _, r in info.iterrows():
         rel = str(r["image_path"]).replace("\\", "/")
