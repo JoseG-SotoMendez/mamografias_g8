@@ -21,6 +21,7 @@ Cada integrante registra **su propio** uso de IA en su sección. La regla del gr
 
 | Fecha | Herramienta | Pregunta / solicitud | Qué respondió / generó | Contraste realizado | Decisión final |
 |---|---|---|---|---|---|
+| 2026-11-19 | Claude Code (Anthropic), vía José; hoy Claude Code también me apoyó en la realización de la actividad | Redactar la tabla de etiquetas y las filas de bitácora con las decisiones de tipo de lesión y BWC | Texto de `docs/tabla_etiquetas.md` con alternativas y justificación | Comparé la tabla con `LABEL_MAP` en `src/prepare_data.py` (MALIGNANT=1, BENIGN=0, BENIGN_WITHOUT_CALLBACK=0) y con las cifras de `data/splits/resumen.json` (1.870 calcificaciones, 1.696 masas, 681 BWC) | Lo firmo con los cambios que hice al leerlo |
 <!-- filas-andres: las filas nuevas van ENCIMA de esta línea -->
 
 ## Miguel Francisco Guerra Negrete

@@ -42,6 +42,8 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 
 | Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
 |---|---|---|---|---|---|
+| 2026-11-19 | ¿Masas, calcificaciones o ambas? | Solo masas · solo calcificaciones · ambas | Ambas (`--lesion both`): casi el doble de datos para ResNet18; `abnormality_type` se conserva para medir errores por tipo. | `docs/tabla_etiquetas.md` (Decisión 1) | <<PENDIENTE: comparar errores por tipo cuando haya resultados>> |
+| 2026-11-19 | ¿Qué hacer con BENIGN_WITHOUT_CALLBACK? | Contarla benigna · excluirla (`--bwc exclude`) | Benigna: es patología benigna; excluirla quitaría datos y dejaría solo las benignas difíciles. | `docs/tabla_etiquetas.md` (Decisión 2), `LABEL_MAP` en `src/prepare_data.py` | |
 <!-- filas-andres: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Andrés:** <<PENDIENTE: la escribe Andrés>>
