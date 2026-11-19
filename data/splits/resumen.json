@@ -1,0 +1,52 @@
+{
+  "parametros": {
+    "source": "kaggle",
+    "root": "/kaggle/input/cbis-ddsm-breast-cancer-image-dataset",
+    "out": "data/splits",
+    "cache": "data/png_cache",
+    "lesion": "both",
+    "bwc": "benign",
+    "seed": 42,
+    "test_frac": 0.15,
+    "val_frac": 0.15,
+    "skip_md5": false
+  },
+  "lesiones_total": 3566,
+  "pacientes_total": 1566,
+  "por_particion": {
+    "train": {
+      "lesiones": 2527,
+      "pacientes": 1115,
+      "benignas": 1493,
+      "malignas": 1034
+    },
+    "val": {
+      "lesiones": 521,
+      "pacientes": 225,
+      "benignas": 299,
+      "malignas": 222
+    },
+    "test": {
+      "lesiones": 518,
+      "pacientes": 226,
+      "benignas": 318,
+      "malignas": 200
+    }
+  },
+  "pathology_original": {
+    "MALIGNANT": 1456,
+    "BENIGN": 1429,
+    "BENIGN_WITHOUT_CALLBACK": 681
+  },
+  "tipo_lesion": {
+    "calcification": 1870,
+    "mass": 1696
+  },
+  "pacientes_en_varias_particiones": 0,
+  "duplicados": null,
+  "descartadas": 2,
+  "vistas": {
+    "MLO": 1894,
+    "CC": 1672
+  }
+}

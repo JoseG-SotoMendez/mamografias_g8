@@ -44,6 +44,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 |---|---|---|---|---|---|
 | 2026-11-19 | ¿Masas, calcificaciones o ambas? | Solo masas · solo calcificaciones · ambas | Ambas (`--lesion both`): casi el doble de datos para ResNet18; `abnormality_type` se conserva para medir errores por tipo. | `docs/tabla_etiquetas.md` (Decisión 1) | <<PENDIENTE: comparar errores por tipo cuando haya resultados>> |
 | 2026-11-19 | ¿Qué hacer con BENIGN_WITHOUT_CALLBACK? | Contarla benigna · excluirla (`--bwc exclude`) | Benigna: es patología benigna; excluirla quitaría datos y dejaría solo las benignas difíciles. | `docs/tabla_etiquetas.md` (Decisión 2), `LABEL_MAP` en `src/prepare_data.py` | |
+| 2026-11-19 | ¿La partición por paciente quedó sin fuga y balanceada? | Split por lesión (rápido, pero mete la misma paciente en train y test) · por paciente | Por paciente con `StratifiedGroupKFold`, semilla 42. 3566 lesiones, 1566 pacientes; malignas train/val/test: 1034 / 222 / 200. check_leakage: SIN FUGA, 0 pacientes compartidas, 0 imágenes repetidas entre particiones. | `data/splits/lesiones.csv`, `data/splits/resumen.json`, salida de `src/check_leakage.py` | |
 <!-- filas-andres: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Andrés:** <<PENDIENTE: la escribe Andrés>>
