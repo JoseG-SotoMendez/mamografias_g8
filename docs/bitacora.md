@@ -59,6 +59,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 | Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
 |---|---|---|---|---|---|
 | 2026-11-24 | ¿Cómo elegir qué errores analizar sin hacer trampa? | Escoger a mano los más vistosos · al azar · los de puntuación más extrema, más la tasa por grupo | Método fijado antes de revisar los casos de error: en validación, FN de puntuación más baja y FP de puntuación más alta (mínimo 4 y 4) y tasa de error por tipo, subtlety y assessment. | `docs/analisis_errores.md` | |
+| 2026-11-24 | ¿Qué hace la interfaz si suben una mamografía completa en vez de un recorte? | Rechazarla · intentar recortar la lesión · aceptarla con advertencia | Aceptar con advertencia visible: el modelo solo vio recortes, así que el resultado no vale, pero rechazar por tamaño puede bloquear recortes grandes legítimos. El corte de tamaño se fijará con el tamaño máximo real de los recortes (EDA). | `app.py` (`analizar`), `reports/eda/eda_resumen.json` | <<PENDIENTE: ajustar el corte con el EDA>> |
 <!-- filas-miguel: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Miguel:** <<PENDIENTE: la escribe Miguel>>
