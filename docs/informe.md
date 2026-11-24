@@ -134,7 +134,33 @@ En la revisión el profesor pidió entrenar más, con más datos, y probar el mo
 **Lectura.** El modelo conserva parte de su capacidad de ordenar (AUC 0,71–0,73 frente a 0,788 en la prueba de CBIS-DDSM), pero sus puntuaciones se desplazan hacia arriba con el nuevo escáner: con el umbral de CBIS-DDSM marca casi todas las lesiones como malignas, e incluso a 0,5 R1 marca 51 de las 68 benignas (especificidad 0,25, tabla de exploración, no usada para elegir nada). Ni más épocas ni más datos del mismo dominio lo corrigen: el problema es el **cambio de dominio**, no la cantidad de datos. Para usar el modelo con otro equipo habría que recalibrar el umbral con un conjunto de calibración de ese equipo, separado del que se use para evaluar.
 
 ### 5.5 Análisis de errores  *(redacta: Miguel)*
-<<PENDIENTE: al menos 4 falsos negativos y 4 falsos positivos reales con puntuación, tipo de lesión, `subtlety`, `assessment` e hipótesis de la causa; ver `docs/analisis_errores.md`>>
+**Método (fijado antes de revisar los casos):** en validación se toman los falsos negativos de puntuación más baja y los falsos positivos de puntuación más alta, mínimo 4 de cada uno, y se mide la tasa de error por tipo de lesión, `subtlety` y `assessment` (`docs/analisis_errores.md`, `src/errores_por_grupo.py`).
+
+**Resultados (R1 en validación, umbral 0,066):** 22 falsos negativos de 222 malignas (de 17 pacientes) y 144 falsos positivos de 299 benignas.
+
+| Grupo | Lesiones | Malignas | FN | FP | % de malignas que se escapan | % de benignas marcadas malignas |
+|---|---|---|---|---|---|---|
+| Calcificaciones | 273 | 107 | 14 | 69 | 13,1 | 41,6 |
+| Masas | 248 | 115 | 8 | 75 | 7,0 | 56,4 |
+| `assessment` 2 | 99 | 0 | 0 | 28 | — | 28,3 |
+| `assessment` 4 | 257 | 125 | 16 | 80 | 12,8 | 60,6 |
+| `subtlety` 1–2 | 89 | 50 | 4 | 28 | 8,0 | 71,8 |
+| `subtlety` 4–5 | 273 | 105 | 9 | 74 | 8,6 | 44,0 |
+
+**Casos** (los 4 primeros de cada lista; tabla completa con hipótesis en `docs/analisis_errores.md`):
+
+| Error | `lesion_uid` | Puntuación | Tipo | `subtlety` | `assessment` | Hipótesis |
+|---|---|---|---|---|---|---|
+| FN | P_00479_LEFT_CC_calcification_1 | 0,0002 | calcificación | 4 | 5 | puntos finos que se pierden al reducir a 224 px |
+| FN | P_01400_LEFT_MLO_calcification_1 | 0,0004 | calcificación | 3 | 4 | calcificaciones gruesas de aspecto benigno; también falla en la vista CC |
+| FN | P_01443_RIGHT_MLO_calcification_1 | 0,0004 | calcificación | 4 | 4 | muy poca señal en el recorte |
+| FN | P_00644_LEFT_CC_mass_1 | 0,0076 | masa | 5 | 4 | masa grande de borde definido; el recorte no muestra el tejido alrededor |
+| FP | P_00250_LEFT_MLO_calcification_1 | 0,992 | calcificación | 2 | 4 | recorte angosto, deformado al llevarlo a 224×224 |
+| FP | P_01769_LEFT_CC_calcification_1 | 0,959 | calcificación | 3 | 2 | calcificación gruesa benigna típica; el modelo reacciona al brillo, no a la forma |
+| FP | P_00120_LEFT_MLO_mass_1 | 0,956 | masa | 5 | 4 | masa muy densa que satura el recorte |
+| FP | P_00572_RIGHT_CC_mass_1 | 0,956 | masa | 1 | 4 | lesión sutil en tejido denso e irregular |
+
+**Lectura.** Los cánceres que se escapan son sobre todo calcificaciones (14 de 22), y no por ser sutiles: varias tenían `subtlety` 4 y BI-RADS 4–5, o sea que el radiólogo las vio claras. Lo más probable es que los puntos finos se pierdan al reducir el recorte a 224 px. Los falsos positivos se concentran en las benignas que también le parecieron sospechosas al radiólogo (con `assessment` 4 se marca el 61 %) y casi no aparecen en las BWC (23 %), así que muchas de las "falsas alarmas" son casos difíciles de verdad. Para reducirlos probaríamos una resolución mayor o recortes en mosaico para las calcificaciones y, con más tiempo, un modelo aparte por tipo de lesión. Las imágenes de estos casos no se suben al repositorio porque son recortes de pacientes.
 
 ## 6. Interfaz  *(redacta: Miguel)*
 <<PENDIENTE: captura de Gradio con el aviso visible; formatos admitidos (PNG, JPG, DICOM); qué pasa con un archivo inválido, una imagen muy pequeña y una mamografía completa>>
