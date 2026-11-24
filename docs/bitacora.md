@@ -16,7 +16,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 | Experimento controlado | R1 vs R2: solo cambian los aumentos | José | `docs/hipotesis.md` (H1) |
 | Umbral | El más alto con sensibilidad ≥ 0,90, elegido en validación | José | `docs/hipotesis.md` (H2), `runs/*/threshold.json` |
 | Selección de errores a analizar | En validación: FN de puntuación más baja y FP de puntuación más alta (mínimo 4 y 4), más la tasa de error por tipo de lesión, `subtlety` y `assessment`; regla fijada antes de ver los casos | Miguel | `docs/analisis_errores.md`, `src/errores_por_grupo.py` |
-| Validaciones de la interfaz | <<PENDIENTE: Miguel>> | Miguel | `app.py`, capturas |
+| Validaciones de la interfaz | Rechaza formato no admitido, archivo ilegible, > 50 MB o < 32 px; si el lado corto supera 2.893 px (máximo real de los recortes en el EDA) responde con advertencia de mamografía completa | Miguel | `app.py`, `docs/capturas/` |
 
 ---
 
@@ -59,7 +59,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 | Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
 |---|---|---|---|---|---|
 | 2026-11-24 | ¿Cómo elegir qué errores analizar sin hacer trampa? | Escoger a mano los más vistosos · al azar · los de puntuación más extrema, más la tasa por grupo | Método fijado antes de revisar los casos de error: en validación, FN de puntuación más baja y FP de puntuación más alta (mínimo 4 y 4) y tasa de error por tipo, subtlety y assessment. | `docs/analisis_errores.md` | |
-| 2026-11-24 | ¿Qué hace la interfaz si suben una mamografía completa en vez de un recorte? | Rechazarla · intentar recortar la lesión · aceptarla con advertencia | Aceptar con advertencia visible: el modelo solo vio recortes, así que el resultado no vale, pero rechazar por tamaño puede bloquear recortes grandes legítimos. El corte de tamaño se fijará con el tamaño máximo real de los recortes (EDA). | `app.py` (`analizar`), `reports/eda/eda_resumen.json` | <<PENDIENTE: ajustar el corte con el EDA>> |
+| 2026-11-24 | ¿Qué hace la interfaz si suben una mamografía completa en vez de un recorte? | Rechazarla · intentar recortar la lesión · aceptarla con advertencia | Aceptar con advertencia visible: el modelo solo vio recortes, así que el resultado no vale, pero rechazar por tamaño puede bloquear recortes grandes legítimos. El corte de tamaño se fijará con el tamaño máximo real de los recortes (EDA). | `app.py` (`analizar`), `reports/eda/eda_resumen.json` | 2026-11-24: corte ajustado a 2.893 px (`tamano_px.ancho_max` de `eda_resumen.json`; antes 2.000 a ojo). La mamografía completa de prueba (3.526×6.256 px) sigue disparando la advertencia; ningún recorte de CBIS-DDSM la dispara. Se mantiene advertir en vez de rechazar. |
 <!-- filas-miguel: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Miguel:** <<PENDIENTE: la escribe Miguel>>

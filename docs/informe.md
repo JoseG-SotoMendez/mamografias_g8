@@ -163,7 +163,34 @@ En la revisión el profesor pidió entrenar más, con más datos, y probar el mo
 **Lectura.** Los cánceres que se escapan son sobre todo calcificaciones (14 de 22), y no por ser sutiles: varias tenían `subtlety` 4 y BI-RADS 4–5, o sea que el radiólogo las vio claras. Lo más probable es que los puntos finos se pierdan al reducir el recorte a 224 px. Los falsos positivos se concentran en las benignas que también le parecieron sospechosas al radiólogo (con `assessment` 4 se marca el 61 %) y casi no aparecen en las BWC (23 %), así que muchas de las "falsas alarmas" son casos difíciles de verdad. Para reducirlos probaríamos una resolución mayor o recortes en mosaico para las calcificaciones y, con más tiempo, un modelo aparte por tipo de lesión. Las imágenes de estos casos no se suben al repositorio porque son recortes de pacientes.
 
 ## 6. Interfaz  *(redacta: Miguel)*
-<<PENDIENTE: captura de Gradio con el aviso visible; formatos admitidos (PNG, JPG, DICOM); qué pasa con un archivo inválido, una imagen muy pequeña y una mamografía completa>>
+La interfaz en Gradio (`app.py`) recibe un recorte de lesión en PNG, JPG o DICOM y devuelve la imagen preprocesada (224×224), la puntuación del modelo, el umbral de decisión (por defecto el elegido en validación, 0,066, con un deslizador de paso 0,001 para explorarlo) y la clase resultante. El aviso «Prototipo académico; no apto para diagnóstico ni decisiones clínicas» se muestra siempre: arriba de la página y al final de cada resultado, junto con la nota de que la puntuación no es una probabilidad calibrada.
+
+**Validaciones de la entrada:**
+
+| Caso | Qué hace la app | Por qué |
+|---|---|---|
+| Formato distinto de PNG/JPG/DICOM | Rechaza con mensaje claro | El modelo solo sabe leer esas imágenes |
+| Archivo que no es imagen (p. ej., un texto con extensión `.png`) | Rechaza: «No se pudo leer la imagen… ¿Es un archivo de imagen válido?» | Evita un error técnico sin explicación |
+| Archivo de más de 50 MB o imagen de menos de 32 px | Rechaza | No es un recorte razonable |
+| Imagen cuyo lado **corto** supera 2.893 px | **Responde, pero advierte** que parece una mamografía completa y que el resultado puede no ser válido | Decisión D2 (ver abajo) |
+
+**Decisión D2: advertir en vez de rechazar, con un corte sacado de los datos.** El modelo solo vio recortes, así que el resultado sobre una mamografía completa no vale; pero un corte de tamaño mal puesto podría bloquear recortes grandes legítimos. Por eso la app advierte y no rechaza, y el corte (`MAX_LADO_RECORTE = 2893`) es el ancho máximo real de los recortes de CBIS-DDSM según el EDA (`reports/eda/eda_resumen.json`, `tamano_px.ancho_max`), no un número a ojo (antes era 2.000). Se compara con el lado corto porque una mamografía completa es grande en los dos lados, mientras que un recorte puede ser alargado.
+
+**Capturas** (R1, tomadas en Colab):
+
+| Caso | Resultado |
+|---|---|
+| Recorte maligno (`1-050.jpg`, 900×852 px) | MALIGNA, puntuación 0,999 |
+| Recorte benigno (`1-287.jpg`, 2.217×553 px) | BENIGNA, puntuación 0,000 |
+| Archivo que no es imagen | Rechazado con mensaje claro |
+| Mamografía completa (`1-249.jpg`, 3.526×6.256 px) | Advertencia visible; aun así da «BENIGNA» (0,057), lo que muestra por qué no se puede confiar en ese resultado |
+
+![Recorte maligno](capturas/gradio_maligna.png)
+![Recorte benigno](capturas/gradio_benigna.png)
+![Archivo inválido](capturas/gradio_archivo_invalido.png)
+![Mamografía completa con advertencia](capturas/gradio_mamografia_completa.png)
+
+Las capturas se tomaron con el corte anterior (2.000 px). Con el nuevo (2.893 px) la advertencia de la mamografía completa sigue saliendo, porque su lado corto mide 3.526 px.
 
 ## 7. Discusión y límites  *(redactan: Andrés los límites de datos, Miguel los límites clínicos y de la interfaz)*
 

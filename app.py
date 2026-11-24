@@ -19,6 +19,9 @@ from inference import Predictor  # noqa: E402
 AVISO = "⚠️ **Prototipo académico; no apto para diagnóstico ni decisiones clínicas.**"
 FORMATOS = (".png", ".jpg", ".jpeg", ".dcm")
 MAX_MB = 50
+# Lado más grande visto en los recortes de CBIS-DDSM (reports/eda/eda_resumen.json, ancho_max).
+# Si incluso el lado corto supera esto, casi seguro es una mamografía completa y no un recorte.
+MAX_LADO_RECORTE = 2893
 
 
 def build_app(pred: Predictor, ejemplos=None):
@@ -40,7 +43,7 @@ def build_app(pred: Predictor, ejemplos=None):
             return None, f"❌ Imagen demasiado pequeña ({w}x{h} px)."
 
         avisos = []
-        if min(w, h) > 2000:
+        if min(w, h) > MAX_LADO_RECORTE:
             avisos.append("La imagen parece una **mamografía completa**. El modelo fue entrenado con "
                           "**recortes de lesión (ROI)**; el resultado puede no ser válido.")
         score = pred.predict(img)
