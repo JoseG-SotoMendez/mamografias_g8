@@ -1,0 +1,38 @@
+{
+  "lesiones": 3566,
+  "pacientes": 1566,
+  "lesiones_por_paciente": {
+    "media": 2.2771392081736908,
+    "max": 24
+  },
+  "proporcion_malignas": 0.4083006169377454,
+  "tamano_px": {
+    "ancho_mediana": 340.0,
+    "alto_mediana": 336.5,
+    "ancho_min": 68.0,
+    "ancho_max": 2893.0
+  },
+  "balance_por_particion": {
+    "train": {
+      "benigna": 1493,
+      "maligna": 1034
+    },
+    "val": {
+      "benigna": 299,
+      "maligna": 222
+    },
+    "test": {
+      "benigna": 318,
+      "maligna": 200
+    }
+  },
+  "imagenes_ilegibles": 0,
+  "image_view": {
+    "MLO": 1894,
+    "CC": 1672
+  },
+  "left_or_right_breast": {
+    "LEFT": 1818,
+    "RIGHT": 1748
+  }
+}

@@ -28,16 +28,32 @@ El objetivo es construir un prototipo que, dado el **recorte de una lesión** ya
 **Limitaciones de partida.** Mamografías de película escaneada de los años 90 (no digitales actuales), una población estadounidense, casos seleccionados porque tenían lesiones, y un tamaño de muestra de unos pocos miles de recortes. Todo lo que concluyamos vale para este conjunto, no para una paciente colombiana en 2026.
 
 ## 2. Datos  *(redacta: Andrés)*
-- Fuente: CBIS-DDSM (TCIA), versión JPEG de Kaggle `awsaf49/cbis-ddsm-breast-cancer-image-dataset`; licencia según la página de TCIA <<PENDIENTE: verificar licencia exacta>>.
-- Cantidades: <<PENDIENTE: pacientes, lesiones, benignas/malignas, masas/calcificaciones, vistas CC/MLO — de `data/splits/resumen.json` y `reports/eda/eda_resumen.json`>>.
-- Tabla de mapeo de etiquetas (copiar de `docs/tabla_etiquetas.md`).
-- EDA: balance (`balance_clases.png`), tipo vs clase (`tipo_vs_clase.png`), tamaños (`tamanos.png`), duplicados y exclusiones (`descartadas.csv`). <<PENDIENTE>>
-- Posibles sesgos: película escaneada, época y población del DDSM, selección de casos con lesión. <<PENDIENTE: en palabras de Andrés>>
+**Fuente.** CBIS-DDSM (*Curated Breast Imaging Subset of DDSM*), publicado en The Cancer Imaging Archive con licencia **CC BY 3.0** (DOI 10.7937/K9/TCIA.2016.7O02S9CY). Usamos la copia en JPEG de Kaggle (`awsaf49/cbis-ddsm-breast-cancer-image-dataset`), que conserva los CSV oficiales con la patología de cada lesión. Son mamografías de película escaneada, de hospitales de Estados Unidos y de los años noventa. La etiqueta sale de la verificación patológica del DDSM, no de una lectura BI-RADS.
+
+**Cantidades.** Los cuatro CSV (masas y calcificaciones, entrenamiento y prueba oficiales) describen 3.568 lesiones. De ellas, 3.566 tienen su recorte; las otras 2 se descartaron porque la imagen recortada no se encontró (`descartadas.csv`), y no hubo archivos idénticos (MD5). Quedan **3.566 lesiones de 1.566 pacientes**: 2,3 lesiones por paciente en promedio y hasta 24 en una misma paciente. Son 1.870 calcificaciones y 1.696 masas, 1.894 en vista MLO y 1.672 en CC (`data/splits/resumen.json`, `reports/eda/eda_resumen.json`). Cada fila es una lesión **en una vista**: la misma lesión vista en CC y en MLO cuenta dos veces.
+
+| Etiqueta original (`pathology`) | Etiqueta del proyecto | Lesiones |
+|---|---|---|
+| `MALIGNANT` | maligna (1) | 1.456 |
+| `BENIGN` | benigna (0) | 1.429 |
+| `BENIGN_WITHOUT_CALLBACK` | benigna (0) | 681 |
+
+El 40,8 % de las lesiones es maligno. `BENIGN_WITHOUT_CALLBACK` (BWC) es el 19 % del total; la decisión de contarla como benigna y sus alternativas están en `docs/tabla_etiquetas.md`.
+
+**Análisis exploratorio.**
+- `reports/eda/balance_clases.png`: las tres particiones tienen una proporción parecida de malignas (40,9 %, 42,6 % y 38,6 %). Las clases están algo desbalanceadas (6 benignas por cada 4 malignas), pero no tanto como para tener que remuestrear.
+- `reports/eda/tipo_vs_clase.png`: los dos tipos no se reparten igual. Las masas son 46 % malignas (784 de 1.696) y las calcificaciones 36 % (672 de 1.870). Además, 540 de las 681 BWC (79 %) son calcificaciones: casi todas las benignas "obvias" están en ese tipo.
+- `reports/eda/tamanos.png`: los recortes van de 68 a 2.893 píxeles de ancho (mediana 340 × 337). Todos se llevan a 224 × 224, así que los grandes se reducen más de 10 veces y pierden detalle fino, lo que afecta sobre todo a las calcificaciones. En la figura, la mayoría de los recortes más grandes son malignos: el tamaño del recorte va algo ligado a la clase.
+- No hubo imágenes ilegibles (`imagenes_ilegibles: 0`).
+
+**Sesgos posibles.** Película escaneada y no mamografía digital; una población y una época concretas; casos que entraron al conjunto porque tenían una lesión (el modelo nunca vio una mamografía normal); calidad de escaneo variable; y la mezcla desigual de tipos y de BWC descrita arriba, que puede hacer que el modelo aprenda atajos del tipo de lesión en vez de la patología.
 
 ## 3. Preparación  *(redacta: Andrés)*
-- División por paciente con `StratifiedGroupKFold` (semilla 42, ≈70/15/15) y evidencia de 0 pacientes compartidas (`check_leakage.py`). <<PENDIENTE: salida real>>
-- Lectura JPEG/DICOM, conversión a 3 canales, redimensionamiento a 224 px, normalización con media y desviación de ImageNet (lo que esperan los pesos preentrenados).
-- Aumentos solo en entrenamiento: volteo horizontal y vertical, rotación ±10°, brillo/contraste ±10 %. Validación y prueba sin alterar. <<PENDIENTE: por qué son razonables en mamografía, en palabras de Andrés>>
+1. **Lectura y etiquetas.** Se unen los cuatro CSV y `pathology` se traduce a 0/1 con `LABEL_MAP` (`src/prepare_data.py`).
+2. **Limpieza.** Cada recorte se ubica con `dicom_info.csv` usando la serie marcada como *cropped* (el recorte, no la máscara). Se descartan las lesiones sin imagen y los archivos idénticos por MD5.
+3. **Partición por paciente.** `StratifiedGroupKFold` con semilla 42 agrupa por `patient_id`, para que todas las lesiones de una paciente caigan en la misma partición, y estratifica por etiqueta. Resultado: 2.527 lesiones de entrenamiento (1.115 pacientes), 521 de validación (225) y 518 de prueba (226), con 40,9 %, 42,6 % y 38,6 % de malignas. El código no da 70/15/15 exacto: separa la prueba como 1 de 7 grupos y la validación como 1 de 6 de lo que queda (≈71/15/15). Salida de `src/check_leakage.py` sobre `data/splits/lesiones.csv`: **0 pacientes** en más de una partición (las tres intersecciones dan 0), 0 imágenes idénticas en particiones distintas, "SIN FUGA". Partir por paciente importa porque cada lesión aparece en dos vistas (CC y MLO): si se partiera por fila, una vista podría quedar en entrenamiento y la otra en prueba, y el modelo se evaluaría con una lesión que ya vio.
+4. **Transformación.** La imagen se lee en escala de grises y se copia a 3 canales, se redimensiona a 224 × 224 y se normaliza con la media y la desviación de ImageNet, que es la escala que esperan los pesos preentrenados de ResNet18.
+5. **Aumentos (solo entrenamiento).** Volteo horizontal y vertical, rotación de hasta ±10° y brillo/contraste ±10 %. Son razonables porque no cambian la patología: una lesión volteada, algo girada o un poco más clara sigue siendo la misma lesión, y una mama izquierda volteada se parece a una derecha. Se dejaron suaves a propósito: rotaciones grandes o cambios fuertes de contraste podrían borrar las calcificaciones finas. Validación y prueba no se alteran.
 
 ## 4. Modelado  *(redacta: José)*
 
