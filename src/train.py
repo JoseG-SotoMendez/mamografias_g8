@@ -69,6 +69,9 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--max-train", type=int, default=0, help="usar solo N lesiones de train (pruebas rápidas)")
+    ap.add_argument("--incluir-val", action="store_true",
+                    help="modelo FINAL: entrena con train+val durante --epochs fijas (elegidas antes en validación); "
+                         "sin parada temprana y sin evaluar en val. Nunca usa prueba.")
     args = ap.parse_args()
 
     set_seed(args.seed)
@@ -77,7 +80,12 @@ def main():
     run.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(args.splits)
-    tr = df[df.split == "train"].reset_index(drop=True)
+    if args.incluir_val:
+        # Más datos para el modelo final: entrenamiento + validación. Las épocas ya se eligieron en validación
+        # con otra corrida, así que aquí no hay nada que decidir con val.
+        tr = df[df.split.isin(["train", "val"])].reset_index(drop=True)
+    else:
+        tr = df[df.split == "train"].reset_index(drop=True)
     va = df[df.split == "val"].reset_index(drop=True)
     if args.max_train:
         tr = tr.sample(min(args.max_train, len(tr)), random_state=args.seed).reset_index(drop=True)
@@ -135,6 +143,16 @@ def main():
             running += loss.item() * len(y); n += len(y)
         sched.step()
 
+        if args.incluir_val:
+            # Modelo final: val está dentro del entrenamiento, así que no se mide ni se usa para parar.
+            row = {"epoca": epoch, "train_loss": running / n, "lr": optim.param_groups[0]["lr"], "seg": time.time() - te}
+            log.append(row)
+            print(" | ".join(f"{k}={v:.4f}" if isinstance(v, float) else f"{k}={v}" for k, v in row.items()))
+            best_epoch, best_auc = epoch, float("nan")
+            torch.save(model.state_dict(), run / "best.pt")  # se guarda la última época (número fijado de antemano)
+            pd.DataFrame(log).to_csv(run / "log.csv", index=False)
+            continue
+
         y_va, s_va = predict_scores(model, dl_va, device)
         with torch.no_grad():
             val_loss = float(criterion(torch.logit(torch.tensor(s_va).clamp(1e-6, 1 - 1e-6)).to(device),
@@ -158,12 +176,20 @@ def main():
         pd.DataFrame(log).to_csv(run / "log.csv", index=False)
 
     config.update({"tiempo_entrenamiento_seg": round(time.time() - t0, 1), "mejor_epoca": best_epoch,
-                   "mejor_val_roc_auc": best_auc, "fin": time.strftime("%Y-%m-%d %H:%M:%S"),
+                   "mejor_val_roc_auc": None if args.incluir_val else best_auc,
+                   "datos_entrenamiento": "train+val" if args.incluir_val else "train", "n_entrenamiento": int(len(tr)), "fin": time.strftime("%Y-%m-%d %H:%M:%S"),
                    "tamano_modelo_MB": round((run / "best.pt").stat().st_size / 1e6, 2)})
     (run / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False))
     pd.DataFrame(log).to_csv(run / "log.csv", index=False)
 
     lg = pd.DataFrame(log)
+    if args.incluir_val:
+        fig, ax = plt.subplots(figsize=(5, 4))
+        ax.plot(lg.epoca, lg.train_loss, label="train+val")
+        ax.set_title(f"{args.name}: pérdida (sin validación)"); ax.set_xlabel("época"); ax.legend()
+        fig.tight_layout(); fig.savefig(run / "curvas.png", dpi=120)
+        print(f"Listo. Modelo final entrenado {best_epoch} épocas con {len(tr)} lesiones (train+val). Carpeta: {run}")
+        return
     fig, ax = plt.subplots(1, 2, figsize=(10, 4))
     ax[0].plot(lg.epoca, lg.train_loss, label="train"); ax[0].plot(lg.epoca, lg.val_loss, label="val")
     ax[0].set_title("Pérdida"); ax[0].set_xlabel("época"); ax[0].legend()
