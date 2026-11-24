@@ -21,7 +21,7 @@ FORMATOS = (".png", ".jpg", ".jpeg", ".dcm")
 MAX_MB = 50
 
 
-def build_app(pred: Predictor):
+def build_app(pred: Predictor, ejemplos=None):
     def analizar(archivo, umbral):
         if archivo is None:
             return None, "Suba una imagen para analizar."
@@ -68,13 +68,17 @@ def build_app(pred: Predictor):
         with gr.Row():
             with gr.Column():
                 archivo = gr.File(label="Imagen (PNG / JPG / DICOM)", file_types=list(FORMATOS))
-                umbral = gr.Slider(0.0, 1.0, value=round(pred.threshold, 3), step=0.01,
+                # step fino: con 0.01 el deslizador redondeaba el umbral de validación (0,066) a 0,07
+                umbral = gr.Slider(0.0, 1.0, value=round(pred.threshold, 3), step=0.001,
                                    label="Umbral de decisión (por defecto: el elegido en validación)")
                 boton = gr.Button("Analizar", variant="primary")
             with gr.Column():
                 vista = gr.Image(label="Imagen preprocesada", type="pil")
                 salida = gr.Markdown()
         boton.click(analizar, [archivo, umbral], [vista, salida])
+        if ejemplos:
+            gr.Examples(examples=[[e, round(pred.threshold, 3)] for e in ejemplos], inputs=[archivo, umbral],
+                        label="Ejemplos (clic y luego «Analizar»)")
         gr.Markdown(f"Modelo: `{pred.cfg['model']}` · corrida `{pred.run.name}` · tamaño de entrada {pred.cfg['img_size']} px")
     return demo
 
@@ -83,5 +87,26 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
     ap.add_argument("--share", action="store_true")
+    ap.add_argument("--ejemplos-de", default=None,
+                    help="predicciones.csv de validación: agrega como ejemplos la maligna con mayor puntuación "
+                         "y la benigna con menor puntuación, más un archivo que no es imagen")
+    ap.add_argument("--data-root", default=None, help="raíz de CBIS-DDSM (Kaggle): agrega una mamografía completa como ejemplo")
     args = ap.parse_args()
-    build_app(Predictor(args.run)).launch(share=args.share)
+    ejemplos = []
+    if args.ejemplos_de:
+        import pandas as pd
+        pr = pd.read_csv(args.ejemplos_de)
+        ejemplos.append(pr[pr.label == 1].sort_values("score").image_path.iloc[-1])
+        ejemplos.append(pr[pr.label == 0].sort_values("score").image_path.iloc[0])
+        falso = Path("ejemplo_no_es_imagen.png")
+        falso.write_text("esto no es una imagen")
+        ejemplos.append(str(falso.resolve()))
+    if args.data_root:
+        import pandas as pd
+        info = next(Path(args.data_root).rglob("dicom_info.csv"))
+        df = pd.read_csv(info)
+        completa = df[df.SeriesDescription.astype(str).str.contains("full", case=False)].image_path.iloc[0]
+        ruta = Path(args.data_root) / "jpeg" / str(completa).split("jpeg/", 1)[1]
+        if ruta.exists():
+            ejemplos.append(str(ruta))
+    build_app(Predictor(args.run), ejemplos).launch(share=args.share)
