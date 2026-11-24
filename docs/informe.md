@@ -140,7 +140,30 @@ En la revisión el profesor pidió entrenar más, con más datos, y probar el mo
 <<PENDIENTE: captura de Gradio con el aviso visible; formatos admitidos (PNG, JPG, DICOM); qué pasa con un archivo inválido, una imagen muy pequeña y una mamografía completa>>
 
 ## 7. Discusión y límites  *(redactan: Andrés los límites de datos, Miguel los límites clínicos y de la interfaz)*
-<<PENDIENTE: tamaño muestral, sesgo de selección, generalización a mamografía digital y a población colombiana, límites de interpretación clínica, qué harían con más tiempo>>
+
+### 7.1 Límites de los datos  *(Andrés)*
+
+**Tamaño.** Son pocos miles de recortes (2.527 de entrenamiento) para una red de 11 millones de parámetros. Con 521 lesiones de validación, una diferencia de AUC de 0,01–0,02 puede ser ruido: con estos datos no se puede afirmar que R1 (0,819) sea mejor que R3 (0,812).
+
+**El modelo no falla igual en todos los tipos de lesión** (prueba, R1, umbral 0,066, `predicciones.csv`):
+
+| Grupo | Lesiones | Errores | Métrica | ROC-AUC |
+|---|---|---|---|---|
+| Calcificaciones malignas | 102 | 17 FN | sensibilidad 0,83 | 0,744 (todas las calcificaciones) |
+| Masas malignas | 98 | 5 FN | sensibilidad 0,95 | 0,837 (todas las masas) |
+| Benignas `BENIGN` | 204 | 141 FP | especificidad 0,31 | 0,730 (malignas vs `BENIGN`) |
+| Benignas `BENIGN_WITHOUT_CALLBACK` | 114 | 31 FP | especificidad 0,73 | 0,892 (malignas vs BWC) |
+
+Dos consecuencias para nuestras decisiones de datos. Primera: 17 de los 22 cánceres que el modelo deja pasar son calcificaciones; incluir ambos tipos dio más datos, pero las calcificaciones (puntos finos que se pierden al reducir el recorte a 224 px) son el punto débil y no se deben esconder en el promedio. Segunda: las BWC, benignas "obvias", son mucho más fáciles de reconocer; el AUC global de 0,788 es optimista, y frente a las benignas que sí generaron seguimiento baja a 0,73. Seguimos contando las BWC como benignas porque lo son, pero el número que importa clínicamente es el de las benignas difíciles.
+
+**Otro escáner, otra época, otra población.** Las imágenes son de película escaneada de hospitales de Estados Unidos de los años noventa. En mini-MIAS (Reino Unido, otro escáner) el AUC baja a 0,71 y el umbral de CBIS-DDSM marca casi todas las benignas como malignas (§5.4). Nada de lo que concluimos vale para mamografía digital ni para pacientes colombianas sin validarlo con datos locales.
+
+**Selección de casos.** El conjunto solo tiene lesiones ya anotadas por un radiólogo: el modelo nunca vio una mamografía normal ni tiene que encontrar la lesión. Que una lesión no esté anotada no significa que no haya cáncer.
+
+**Unidad de conteo.** Cada fila es una lesión en una vista: la misma lesión vista en CC y en MLO cuenta dos veces. Las métricas son por recorte, no por lesión ni por paciente.
+
+### 7.2 Límites clínicos y de la interfaz  *(Miguel)*
+<<PENDIENTE: límites de interpretación clínica, de la interfaz y qué harían con más tiempo>>
 
 ## 8. Conclusiones  *(redacta: José, revisan todos)*
 1. Partir por paciente fue la decisión más importante del pipeline: con 0 pacientes compartidas, las cifras de validación y prueba no están infladas por fuga.
