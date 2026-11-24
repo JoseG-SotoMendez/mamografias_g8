@@ -50,7 +50,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 | 2026-11-24 | Para revisar D1 y D2 hacía falta la tasa de error por tipo de lesión, y el análisis de errores de Miguel aún no estaba en el repo. | Esperar a Miguel · usar solo mini-MIAS (27 calcificaciones, muy pocas) · contar los errores por grupo en las predicciones de prueba de R1 que ya existían | Contar FN y FP por `abnormality_type` y por `pathology` en `predicciones.csv` de la prueba de R1 (umbral 0,066). La prueba ya se había evaluado una vez: no se reentrena ni se cambia el umbral, solo se describe por subgrupos. Los totales coinciden con `metricas.json` (FN 22, FP 172, AUC 0,788). | `runs/R1_resnet18_aug/eval_test/predicciones.csv` (Drive del grupo); informe §7.1 | |
 <!-- filas-andres: las filas nuevas van ENCIMA de esta línea -->
 
-**Contribución individual de Andrés:** <<PENDIENTE: la escribe Andrés>>
+**Contribución individual de Andrés:** Decidí y documenté el tipo de lesión (masas y calcificaciones) y el tratamiento de `BENIGN_WITHOUT_CALLBACK`; versioné y verifiqué la partición por paciente sin fuga; redacté las secciones de datos y preparación del informe y los límites de los datos; y revisé mis dos decisiones con los errores del modelo por tipo de lesión.
 
 ---
 
