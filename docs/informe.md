@@ -216,7 +216,17 @@ Dos consecuencias para nuestras decisiones de datos. Primera: 17 de los 22 cánc
 **Unidad de conteo.** Cada fila es una lesión en una vista: la misma lesión vista en CC y en MLO cuenta dos veces. Las métricas son por recorte, no por lesión ni por paciente.
 
 ### 7.2 Límites clínicos y de la interfaz  *(Miguel)*
-<<PENDIENTE: límites de interpretación clínica, de la interfaz y qué harían con más tiempo>>
+**No detecta lesiones.** El prototipo clasifica recortes que un radiólogo ya marcó; no busca la lesión en la mamografía. Si se le da una mamografía completa, advierte, pero igual devuelve una clase (en la captura de §6 dijo «benigna» con 0,057), y ese resultado no significa nada. Tampoco sabe decir «esto no es una mamografía»: solo revisa formato y tamaño.
+
+**La puntuación no es un riesgo.** No está calibrada: un 0,9 no quiere decir «90 % de probabilidad de cáncer», y el umbral (0,066) está muy lejos de 0,5. Por eso la interfaz muestra la clase junto con el umbral y la nota de que la puntuación no es una probabilidad.
+
+**Los errores que comete importan clínicamente.** Con el umbral elegido, en la prueba se escapan 11 de cada 100 malignas (22 de 200) y más de la mitad de las benignas salen marcadas como sospechosas (172 de 318). Los cánceres que se escapan son sobre todo calcificaciones, incluso algunas que el radiólogo vio claras (BI-RADS 4–5, §5.5): un «benigna» del modelo no descarta nada. Muchas de las falsas alarmas son benignas que también le parecieron sospechosas al radiólogo, así que el modelo no le quita trabajo justo donde más se necesita.
+
+**Solo vale para este conjunto de datos.** En mini-MIAS (otro escáner) el AUC baja a 0,71 y el umbral de CBIS-DDSM marca casi todo como maligno (§5.4). Usarlo con otro equipo, con mamografía digital o con pacientes de aquí exigiría recalibrar y validar con datos locales.
+
+**Límites de la interfaz.** El deslizador deja cambiar el umbral sin ninguna protección: un usuario podría subirlo hasta que el resultado «le guste». No guarda registro de lo que se analiza, no explica en qué parte de la imagen se fijó el modelo y no tiene control de acceso. El enlace `--share` de Colab es público y temporal: no se deben subir imágenes de pacientes reales.
+
+**Qué haríamos con más tiempo:** mapas de activación (Grad-CAM) para ver en qué se fija el modelo; mayor resolución o recortes en mosaico para las calcificaciones; calibrar la puntuación (p. ej., escalado de temperatura) en un conjunto aparte; un detector previo que rechace imágenes que no sean recortes de mamografía; y bloquear el umbral en el valor de validación cuando la app se use fuera del curso.
 
 ## 8. Conclusiones  *(redacta: José, revisan todos)*
 1. Partir por paciente fue la decisión más importante del pipeline: con 0 pacientes compartidas, las cifras de validación y prueba no están infladas por fuga.
