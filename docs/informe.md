@@ -57,7 +57,7 @@ Se entrenaron tres corridas con la misma partición, semilla 42, pérdida `BCEWi
 
 **Lo que se vio al entrenar.** R0 fue inestable con lr = 1e-3: en la época 8 su AUC de validación cayó a 0,47 y a 0,5 llamó benignas a todas las lesiones; la parada temprana conservó la época 5 (0,694). R2, sin aumentos, bajó la pérdida de entrenamiento de 0,595 a 0,028 en seis épocas mientras la de validación subía de 0,567 a 0,906: memorizó. R1 bajó más despacio (0,24 en la época 15) y su mejor AUC llegó en la época 12.
 
-## 5. Evaluación  *(redacta: José, salvo 5.4 que redacta Miguel)*
+## 5. Evaluación  *(redacta: José, salvo 5.5 que redacta Miguel)*
 
 ### 5.1 Umbral
 El umbral se elige **solo en validación**: el más alto que logra sensibilidad maligna ≥ 0,90 (`evaluate.py --strategy sens --target-sens 0.90`) y se guarda en `threshold.json`. La salida del modelo es una **puntuación** (sigmoide de un logit), no una probabilidad calibrada: un 0,7 no significa "70 % de probabilidad de cáncer", solo que el modelo la ordena por encima de un 0,6. Por eso el umbral se fija mirando el compromiso sensibilidad/especificidad y no leyendo la puntuación como riesgo.
@@ -95,7 +95,29 @@ En palabras: de cada 100 lesiones malignas, el modelo deja pasar 11 como benigna
 
 **¿Se confirmaron las hipótesis?** H1, parcialmente: los aumentos subieron el AUC (+0,037) y retrasaron la mejor época (12 vs 1), pero la forma en que medimos el sobreajuste (brecha en la mejor época de cada modelo) no lo mostró. Comparando a igual época, el efecto es claro. H2, sí: el umbral quedó muy por debajo de 0,5 (0,066), la especificidad bajó a 0,518 en validación y la sensibilidad en prueba fue 0,890, dentro del rango 0,80–0,90 predicho.
 
-### 5.4 Análisis de errores  *(redacta: Miguel)*
+### 5.4 Indicaciones de la revisión del día 7: más épocas, más datos e imágenes nuevas
+
+En la revisión el profesor pidió entrenar más, con más datos, y probar el modelo final con imágenes que nunca hubiera visto. Se hicieron tres corridas más con el código del commit `56148a4` (24-nov):
+
+| Corrida | Qué cambia | Datos de entrenamiento | Épocas (mejor) | ROC-AUC val | Umbral (val) | Especificidad (val) | FP (val) |
+|---|---|---|---|---|---|---|---|
+| R1 | referencia | 2.527 | 15 (12) | **0,819** | 0,066 | **0,518** | **144** |
+| R3 | más épocas: hasta 30, paciencia 7 | 2.527 | 30 (10; paró en 17) | 0,812 | 0,068 | 0,498 | 150 |
+| R4 | más datos: train + val | **3.048** (+21 %) | 10, fijadas con R3 | (no aplica: val está dentro) | 0,068, tomado de R3 | — | — |
+
+**Más épocas no mejoró.** R3 alcanzó su mejor AUC en la época 10 (0,812) y después sobreajustó: la pérdida de validación subió de 0,59 a 0,87 mientras la de entrenamiento seguía bajando. R1 ya estaba cerca de su techo con 15 épocas.
+
+**Prueba externa con mini-MIAS.** mini-MIAS (Reino Unido) es otro escáner, otra población y otra resolución (200 µm por píxel). De sus 330 anotaciones se descartaron 207 mamografías normales y 4 anomalías sin coordenadas, y quedaron **119 lesiones de 104 pacientes (51 malignas, 68 benignas; 92 masas y 27 calcificaciones)**. Cada lesión se recortó con el centro y el radio del archivo `Info.txt` (`src/prepare_mias.py`). Ningún modelo vio estas imágenes; el umbral es el fijado en validación de CBIS-DDSM, sin reajustar nada con MIAS (`src/evaluate_external.py`, `registro_uso_externo.txt`).
+
+| Modelo | ROC-AUC MIAS | Sensibilidad | Especificidad | FN | FP |
+|---|---|---|---|---|---|
+| R1 | 0,710 | 1,000 | 0,029 | 0 | 66 |
+| R3 | 0,725 | 1,000 | 0,015 | 0 | 67 |
+| R4 (train+val) | 0,714 | 1,000 | 0,015 | 0 | 67 |
+
+**Lectura.** El modelo conserva parte de su capacidad de ordenar (AUC 0,71–0,73 frente a 0,788 en la prueba de CBIS-DDSM), pero sus puntuaciones se desplazan hacia arriba con el nuevo escáner: con el umbral de CBIS-DDSM marca casi todas las lesiones como malignas, e incluso a 0,5 R1 marca 51 de las 68 benignas (especificidad 0,25, tabla de exploración, no usada para elegir nada). Ni más épocas ni más datos del mismo dominio lo corrigen: el problema es el **cambio de dominio**, no la cantidad de datos. Para usar el modelo con otro equipo habría que recalibrar el umbral con un conjunto de calibración de ese equipo, separado del que se use para evaluar.
+
+### 5.5 Análisis de errores  *(redacta: Miguel)*
 <<PENDIENTE: al menos 4 falsos negativos y 4 falsos positivos reales con puntuación, tipo de lesión, `subtlety`, `assessment` e hipótesis de la causa; ver `docs/analisis_errores.md`>>
 
 ## 6. Interfaz  *(redacta: Miguel)*
@@ -105,7 +127,11 @@ En palabras: de cada 100 lesiones malignas, el modelo deja pasar 11 como benigna
 <<PENDIENTE: tamaño muestral, sesgo de selección, generalización a mamografía digital y a población colombiana, límites de interpretación clínica, qué harían con más tiempo>>
 
 ## 8. Conclusiones  *(redacta: José, revisan todos)*
-<<PENDIENTE: tras los resultados>>
+1. Partir por paciente fue la decisión más importante del pipeline: con 0 pacientes compartidas, las cifras de validación y prueba no están infladas por fuga.
+2. La transferencia de aprendizaje funciona con pocos datos: ResNet18 preentrenada superó a la red desde cero por 0,125 de AUC, y los aumentos le sumaron 0,037 y retrasaron el sobreajuste.
+3. Con el umbral elegido en validación para no dejar pasar malignas, el modelo atrapa 89 de cada 100 en la prueba, pero marca como sospechosas a más de la mitad de las benignas: es un filtro muy sensible, no un clasificador fino.
+4. Ni más épocas ni más datos del mismo dominio mejoraron el modelo; las imágenes de otro escáner (mini-MIAS) mostraron el límite real: el modelo ordena algo, pero su umbral no se transfiere. Cualquier uso fuera de CBIS-DDSM exige recalibrar y validar con datos de ese equipo.
+5. Es un prototipo académico: no detecta lesiones, no está calibrado y no sirve para decisiones clínicas.
 
 ## Anexos
 - `docs/bitacora.md`, `docs/registro_ia.md`, `docs/hipotesis.md`, `docs/tabla_etiquetas.md`, `docs/analisis_errores.md`
