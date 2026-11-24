@@ -15,7 +15,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 | División | Por paciente, 70/15/15, semilla 42 (`StratifiedGroupKFold`) | Andrés | `src/prepare_data.py`, `src/check_leakage.py`, `data/splits/lesiones.csv` |
 | Experimento controlado | R1 vs R2: solo cambian los aumentos | José | `docs/hipotesis.md` (H1) |
 | Umbral | El más alto con sensibilidad ≥ 0,90, elegido en validación | José | `docs/hipotesis.md` (H2), `runs/*/threshold.json` |
-| Selección de errores a analizar | <<PENDIENTE: Miguel>> | Miguel | `docs/analisis_errores.md` |
+| Selección de errores a analizar | En validación: FN de puntuación más baja y FP de puntuación más alta (mínimo 4 y 4), más la tasa de error por tipo de lesión, `subtlety` y `assessment`; regla fijada antes de ver los casos | Miguel | `docs/analisis_errores.md`, `src/errores_por_grupo.py` |
 | Validaciones de la interfaz | <<PENDIENTE: Miguel>> | Miguel | `app.py`, capturas |
 
 ---
@@ -58,6 +58,7 @@ Cada integrante escribe **solo en su sección** (así no chocamos al hacer `git 
 
 | Fecha | Dificultad / pregunta | Alternativas consideradas | Decisión | Evidencia | Revisión posterior |
 |---|---|---|---|---|---|
+| 2026-11-24 | ¿Cómo elegir qué errores analizar sin hacer trampa? | Escoger a mano los más vistosos · al azar · los de puntuación más extrema, más la tasa por grupo | Método fijado antes de revisar los casos de error: en validación, FN de puntuación más baja y FP de puntuación más alta (mínimo 4 y 4) y tasa de error por tipo, subtlety y assessment. | `docs/analisis_errores.md` | |
 <!-- filas-miguel: las filas nuevas van ENCIMA de esta línea -->
 
 **Contribución individual de Miguel:** <<PENDIENTE: la escribe Miguel>>

@@ -31,4 +31,5 @@ Cada integrante registra **su propio** uso de IA en su sección. La regla del gr
 
 | Fecha | Herramienta | Pregunta / solicitud | Qué respondió / generó | Contraste realizado | Decisión final |
 |---|---|---|---|---|---|
+| 2026-11-24 | Claude Code (Anthropic), en una sesión mía desde el PC de Andrés, con el paquete que preparó José | Proponer un método para el análisis de errores que no dependa de escoger casos a mano | El texto del método en `docs/analisis_errores.md` lo redactó Claude (borrador del paquete de José) | Revisé en `src/evaluate.py` (líneas 159–160) que `falsos_negativos.csv` sale ordenado de menor a mayor puntuación y `falsos_positivos.csv` de mayor a menor, así que la regla "los primeros del CSV" es la que escribimos. El método se subió antes de descargar los FN/FP | Lo firmo como está |
 <!-- filas-miguel: las filas nuevas van ENCIMA de esta línea -->
