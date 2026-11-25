@@ -1,0 +1,63 @@
+# Vigilante de la app publicada.
+# Cada 6 horas revisa que las versiones web respondan (página y modelo ONNX) y, si está configurada la
+# variable HF_SPACE (Space de Gradio), le manda una imagen de prueba y revisa que conteste con una puntuación.
+# Si algo falla, el trabajo queda en rojo y GitHub le manda un correo al dueño del repositorio.
+name: Vigilante de la app
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  probar-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SPACE: ${{ vars.HF_SPACE }}
+    steps:
+      - name: Versiones web (GitHub Pages y Space estático)
+        run: |
+          set -e
+          for url in \
+            "https://joseg-sotomendez.github.io/mamografias_g8/" \
+            "https://joseg-sotomendez.github.io/mamografias_g8/modelo_r1.onnx" \
+            "https://jostgreen-mamografias-g8-web.static.hf.space/index.html" \
+            "https://jostgreen-mamografias-g8-web.static.hf.space/modelo_r1.onnx"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -L --retry 3 --retry-delay 20 "$url")
+            echo "$code  $url"
+            test "$code" = "200"
+          done
+
+      - name: Instalar cliente de Gradio
+        if: env.SPACE != ''
+        run: pip install -q gradio_client pillow numpy
+
+      - name: App de Gradio (manda una imagen y revisa la respuesta)
+        if: env.SPACE != ''
+        run: |
+          python - <<'EOF'
+          import os, time
+          import numpy as np
+          from PIL import Image
+          from gradio_client import Client, handle_file
+
+          space = os.environ["SPACE"]
+          # Imagen sintética (no es de ninguna paciente): solo comprueba que todo el camino funciona.
+          rng = np.random.default_rng(42)
+          Image.fromarray(rng.integers(0, 255, (300, 300), dtype=np.uint8)).save("prueba.png")
+          ultimo = None
+          for intento in range(1, 6):  # si el Space estaba dormido, tarda un poco en despertar
+              try:
+                  client = Client(space)
+                  _, texto = client.predict(handle_file("prueba.png"), 0.066, api_name="/analizar")
+                  assert "Puntuación del modelo" in texto, texto
+                  print(f"OK en el intento {intento}:\n{texto}")
+                  break
+              except Exception as e:
+                  ultimo = e
+                  print(f"Intento {intento} falló: {e!r}; espero 60 s")
+                  time.sleep(60)
+          else:
+              raise SystemExit(f"La app no respondió: {ultimo!r}")
+          EOF

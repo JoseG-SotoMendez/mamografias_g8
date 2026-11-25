@@ -26,3 +26,7 @@ runs/**/falsos_*.png
 venv/
 .env
 .claude/
+
+# Despliegue: el modelo ONNX se publica en la rama gh-pages, no en main
+web/*.onnx
+build/

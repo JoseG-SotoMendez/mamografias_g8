@@ -78,7 +78,8 @@ def build_app(pred: Predictor, ejemplos=None):
             with gr.Column():
                 vista = gr.Image(label="Imagen preprocesada", type="pil")
                 salida = gr.Markdown()
-        boton.click(analizar, [archivo, umbral], [vista, salida])
+        # api_name fijo: el vigilante de GitHub Actions llama a /analizar para comprobar que la app responde
+        boton.click(analizar, [archivo, umbral], [vista, salida], api_name="analizar")
         if ejemplos:
             gr.Examples(examples=[[e, round(pred.threshold, 3)] for e in ejemplos], inputs=[archivo, umbral],
                         label="Ejemplos (clic y luego «Analizar»)")
