@@ -1,0 +1,41 @@
+{
+  "torch": "2.15.0+cpu",
+  "python": "3.11.9",
+  "fecha": "2026-11-25 17:00:01",
+  "batch": 32,
+  "modelos": {
+    "smallcnn": {
+      "parametros": 98049,
+      "pesos_MB": 0.4,
+      "cpu": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+      "hilos": 4,
+      "ms_por_imagen_cpu_mediana": 12.3,
+      "ms_por_imagen_cpu_max": 14.4,
+      "memoria_base_python_torch_MB": 319.3,
+      "memoria_extra_por_modelo_y_prediccion_MB": 10.0,
+      "memoria_proceso_total_MB": 329.3
+    },
+    "resnet18": {
+      "parametros": 11177025,
+      "pesos_MB": 42.6,
+      "cpu": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+      "hilos": 4,
+      "ms_por_imagen_cpu_mediana": 52.9,
+      "ms_por_imagen_cpu_max": 57.1,
+      "memoria_base_python_torch_MB": 319.4,
+      "memoria_extra_por_modelo_y_prediccion_MB": 56.7,
+      "memoria_proceso_total_MB": 376.1
+    },
+    "efficientnet_b0": {
+      "parametros": 4008829,
+      "pesos_MB": 15.3,
+      "cpu": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+      "hilos": 4,
+      "ms_por_imagen_cpu_mediana": 45.0,
+      "ms_por_imagen_cpu_max": 49.6,
+      "memoria_base_python_torch_MB": 319.1,
+      "memoria_extra_por_modelo_y_prediccion_MB": 38.9,
+      "memoria_proceso_total_MB": 358.1
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "torch": "2.14.1+cu130",
+  "python": "3.13.16",
+  "fecha": "2026-11-25 22:13:00",
+  "batch": 32,
+  "modelos": {
+    "smallcnn": {
+      "parametros": 98049,
+      "pesos_MB": 0.4,
+      "gpu": "Tesla T4",
+      "memoria_max_asignada_MB": 353.6,
+      "memoria_max_reservada_MB": 506.0,
+      "ms_por_paso_gpu": 35.5,
+      "imagenes_por_seg_gpu_sin_carga_de_datos": 901.6,
+      "imagenes_por_seg_prediccion_gpu": 3770.1,
+      "memoria_max_prediccion_gpu_MB": 148.6,
+      "cpu": "x86_64",
+      "hilos": 2,
+      "ms_por_imagen_cpu_mediana": 15.4,
+      "ms_por_imagen_cpu_max": 32.1,
+      "memoria_proceso_por_el_modelo_MB": 0.3,
+      "memoria_proceso_total_MB": 1833.9
+    },
+    "resnet18": {
+      "parametros": 11177025,
+      "pesos_MB": 42.6,
+      "gpu": "Tesla T4",
+      "memoria_max_asignada_MB": 572.1,
+      "memoria_max_reservada_MB": 684.0,
+      "ms_por_paso_gpu": 50.5,
+      "imagenes_por_seg_gpu_sin_carga_de_datos": 633.5,
+      "imagenes_por_seg_prediccion_gpu": 2458.8,
+      "memoria_max_prediccion_gpu_MB": 346.8,
+      "cpu": "x86_64",
+      "hilos": 2,
+      "ms_por_imagen_cpu_mediana": 50.1,
+      "ms_por_imagen_cpu_max": 79.8,
+      "memoria_proceso_por_el_modelo_MB": 0.0,
+      "memoria_proceso_total_MB": 1940.4
+    },
+    "efficientnet_b0": {
+      "parametros": 4008829,
+      "pesos_MB": 15.3,
+      "gpu": "Tesla T4",
+      "memoria_max_asignada_MB": 1458.1,
+      "memoria_max_reservada_MB": 1630.0,
+      "ms_por_paso_gpu": 91.9,
+      "imagenes_por_seg_gpu_sin_carga_de_datos": 348.1,
+      "imagenes_por_seg_prediccion_gpu": 1519.0,
+      "memoria_max_prediccion_gpu_MB": 264.9,
+      "cpu": "x86_64",
+      "hilos": 2,
+      "ms_por_imagen_cpu_mediana": 42.0,
+      "ms_por_imagen_cpu_max": 304.6,
+      "memoria_proceso_por_el_modelo_MB": 19.7,
+      "memoria_proceso_total_MB": 2350.7
+    }
+  }
+}
