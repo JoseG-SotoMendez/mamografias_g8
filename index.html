@@ -65,7 +65,7 @@
       <label class="zona" id="zona">
         <input type="file" id="archivo" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
         <strong>Haz clic o arrastra aquí la imagen</strong><br>
-        <span class="nota">PNG o JPG de un <b>recorte de la lesión</b> (ROI), como los de CBIS-DDSM. Para DICOM usa la app principal.</span>
+        <span class="nota">PNG o JPG de un <b>recorte de la lesión</b> (ROI), como los de CBIS-DDSM. Para DICOM usa la app de Gradio del repositorio.</span>
       </label>
       <div class="estado" id="nombre">Ninguna imagen seleccionada.</div>
       <label class="umbral">Umbral de decisión: <b id="valorUmbral">0.066</b>
@@ -163,7 +163,7 @@ function redimensionarL(gris, w, h) {
 async function analizar() {
   const f = archivoActual; if (!f || !sesion) return;
   const ext = (f.name.split(".").pop() || "").toLowerCase();
-  if (!["png", "jpg", "jpeg"].includes(ext)) return mostrar(`<div class="resultado error">❌ Formato no admitido (.${ext}). Use PNG o JPG; para DICOM, la app principal.</div>`);
+  if (!["png", "jpg", "jpeg"].includes(ext)) return mostrar(`<div class="resultado error">❌ Formato no admitido (.${ext}). Use PNG o JPG; para DICOM, la app de Gradio del repositorio.</div>`);
   if (f.size > MAX_MB * 1e6) return mostrar(`<div class="resultado error">❌ Archivo demasiado grande (&gt; ${MAX_MB} MB).</div>`);
   let bmp;
   try { bmp = await createImageBitmap(f, { colorSpaceConversion: "none", premultiplyAlpha: "none" }); }
