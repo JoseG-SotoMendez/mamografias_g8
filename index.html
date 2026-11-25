@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesiones mamográficas G8</title>
+<meta name="description" content="Prototipo académico del Grupo 8: clasificación de recortes de lesiones mamográficas (benigna / maligna) con ResNet18. Corre en el navegador.">
+<style>
+  :root {
+    --fondo: #f6f4f1; --tarjeta: #ffffff; --texto: #1f2328; --suave: #5d6470; --borde: #dcd8d2;
+    --acento: #7a2f4b; --acento-suave: #f3e6eb; --ok: #1f6f50; --ok-suave: #e3f2ea; --mal: #a3261f; --mal-suave: #fbe7e5;
+    --aviso: #7a5200; --aviso-suave: #fff4d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fondo: #16181c; --tarjeta: #1f2228; --texto: #e8e6e3; --suave: #a3a8b0; --borde: #343841;
+      --acento: #e48aab; --acento-suave: #3a2530; --ok: #6fd3a8; --ok-suave: #17322a; --mal: #ff8f86; --mal-suave: #3d1f1d;
+      --aviso: #ffd27a; --aviso-suave: #3a3018;
+    }
+  }
+  :root[data-theme="dark"] {
+    --fondo: #16181c; --tarjeta: #1f2228; --texto: #e8e6e3; --suave: #a3a8b0; --borde: #343841;
+    --acento: #e48aab; --acento-suave: #3a2530; --ok: #6fd3a8; --ok-suave: #17322a; --mal: #ff8f86; --mal-suave: #3d1f1d;
+    --aviso: #ffd27a; --aviso-suave: #3a3018;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--suave); margin: 0 0 16px; }
+  .aviso { background: var(--aviso-suave); color: var(--aviso); border: 1px solid var(--aviso); border-radius: 10px; padding: 10px 14px; font-weight: 600; }
+  .rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 760px) { .rejilla { grid-template-columns: 1fr; } }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; min-width: 0; }
+  .tarjeta h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .zona { border: 2px dashed var(--borde); border-radius: 10px; padding: 22px 12px; text-align: center; cursor: pointer; color: var(--suave); }
+  .zona.encima { border-color: var(--acento); background: var(--acento-suave); }
+  .zona input { display: none; }
+  label.umbral { display: block; margin-top: 14px; font-size: .95rem; }
+  input[type=range] { width: 100%; accent-color: var(--acento); }
+  button { margin-top: 12px; width: 100%; padding: 10px; border: 0; border-radius: 8px; background: var(--acento); color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .vista { width: 100%; max-width: 280px; aspect-ratio: 1; display: block; margin: 0 auto 12px; border-radius: 8px; background: #000; image-rendering: auto; }
+  .resultado { border-radius: 10px; padding: 12px 14px; font-size: 1.05rem; }
+  .resultado.maligna { background: var(--mal-suave); color: var(--mal); }
+  .resultado.benigna { background: var(--ok-suave); color: var(--ok); }
+  .resultado.error { background: var(--mal-suave); color: var(--mal); }
+  .resultado.aviso2 { background: var(--aviso-suave); color: var(--aviso); margin-bottom: 8px; }
+  ul.datos { margin: 10px 0 0; padding-left: 18px; color: var(--texto); }
+  .nota { color: var(--suave); font-size: .9rem; }
+  .estado { color: var(--suave); font-size: .9rem; margin-top: 8px; }
+  footer { margin-top: 24px; color: var(--suave); font-size: .9rem; }
+  a { color: var(--acento); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Clasificación de lesiones mamográficas (benigna / maligna)</h1>
+  <p class="sub">Grupo 8 · Aprendizaje Computacional · modelo ResNet18 (corrida R1) · versión que corre en tu navegador</p>
+  <div class="aviso">⚠️ Prototipo académico; no apto para diagnóstico ni decisiones clínicas.</div>
+
+  <div class="rejilla">
+    <section class="tarjeta">
+      <h2>1. Sube un recorte de lesión</h2>
+      <label class="zona" id="zona">
+        <input type="file" id="archivo" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+        <strong>Haz clic o arrastra aquí la imagen</strong><br>
+        <span class="nota">PNG o JPG de un <b>recorte de la lesión</b> (ROI), como los de CBIS-DDSM. Para DICOM usa la app principal.</span>
+      </label>
+      <div class="estado" id="nombre">Ninguna imagen seleccionada.</div>
+      <label class="umbral">Umbral de decisión: <b id="valorUmbral">0.066</b>
+        <span class="nota">(por defecto el elegido en validación: 0.066)</span>
+        <input type="range" id="umbral" min="0" max="1" step="0.001" value="0.066">
+      </label>
+      <button id="analizar" disabled>Analizar</button>
+      <div class="estado" id="estado">Cargando el modelo (45 MB, solo la primera vez)…</div>
+    </section>
+
+    <section class="tarjeta" aria-live="polite">
+      <h2>2. Resultado del modelo</h2>
+      <canvas class="vista" id="vista" width="224" height="224" aria-label="Imagen preprocesada a 224 x 224"></canvas>
+      <div id="salida" class="nota">Aquí aparecerá la puntuación del modelo.</div>
+    </section>
+  </div>
+
+  <footer>
+    <p><b>Qué hace:</b> recibe un recorte de lesión, lo pasa a escala de grises, lo lleva a 224 × 224 píxeles igual que en el entrenamiento y devuelve la puntuación de la ResNet18. La imagen <b>no sale de tu equipo</b>: todo se calcula en el navegador.</p>
+    <p><b>Qué no hace:</b> no detecta lesiones en una mamografía completa, no da una probabilidad de cáncer (la puntuación no está calibrada) y no sirve para decisiones clínicas.</p>
+    <p>Repositorio: <a href="https://github.com/JoseG-SotoMendez/mamografias_g8">github.com/JoseG-SotoMendez/mamografias_g8</a></p>
+  </footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script>
+// Constantes iguales a las de la app de Gradio (app.py) y del entrenamiento (src/common.py)
+const UMBRAL_VALIDACION = 0.06638045608997345;
+const MAX_MB = 50, MIN_LADO = 32, MAX_LADO_RECORTE = 2893, TAM = 224;
+const MEDIA = [0.485, 0.456, 0.406], DESV = [0.229, 0.224, 0.225];
+
+const $ = (id) => document.getElementById(id);
+let sesion = null, archivoActual = null;
+
+ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/";
+ort.InferenceSession.create("modelo_r1.onnx", { executionProviders: ["wasm"] })
+  .then((s) => { sesion = s; $("estado").textContent = "Modelo listo."; actualizarBoton(); })
+  .catch((e) => { $("estado").textContent = "No se pudo cargar el modelo: " + e.message; });
+
+$("umbral").addEventListener("input", () => { $("valorUmbral").textContent = Number($("umbral").value).toFixed(3); });
+$("archivo").addEventListener("change", (e) => elegir(e.target.files[0]));
+const zona = $("zona");
+["dragenter", "dragover"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.add("encima"); }));
+["dragleave", "drop"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.remove("encima"); }));
+zona.addEventListener("drop", (e) => elegir(e.dataTransfer.files[0]));
+$("analizar").addEventListener("click", analizar);
+
+function elegir(f) { archivoActual = f || null; $("nombre").textContent = f ? f.name : "Ninguna imagen seleccionada."; actualizarBoton(); }
+function actualizarBoton() { $("analizar").disabled = !(sesion && archivoActual); }
+function mostrar(html) { $("salida").innerHTML = html; }
+
+// --- Redimensionamiento bilineal idéntico al de Pillow (Image.resize con BILINEAR, imágenes de 8 bits) ---
+// Pillow calcula los pesos con un filtro triangular escalado y los guarda en punto fijo (22 bits).
+const PREC = 22;
+function coeficientes(entrada, salida) {
+  const escala = entrada / salida, fescala = Math.max(escala, 1), soporte = fescala;
+  const res = [];
+  for (let xx = 0; xx < salida; xx++) {
+    const centro = (xx + 0.5) * escala;
+    let xmin = Math.trunc(centro - soporte + 0.5); if (xmin < 0) xmin = 0;
+    let xmax = Math.trunc(centro + soporte + 0.5); if (xmax > entrada) xmax = entrada; xmax -= xmin;
+    const k = []; let suma = 0;
+    for (let x = 0; x < xmax; x++) {
+      let t = Math.abs((x + xmin - centro + 0.5) / fescala);
+      const w = t < 1 ? 1 - t : 0; k.push(w); suma += w;
+    }
+    const kk = k.map((w) => { const v = suma !== 0 ? w / suma : w; return v < 0 ? Math.trunc(-0.5 + v * (1 << PREC)) : Math.trunc(0.5 + v * (1 << PREC)); });
+    res.push({ xmin, kk });
+  }
+  return res;
+}
+const clip8 = (s) => { const v = Math.floor(s / (1 << PREC)); return v < 0 ? 0 : v > 255 ? 255 : v; };
+function redimensionarL(gris, w, h) {
+  let tmp = gris, tw = w;
+  if (w !== TAM) {                       // pasada horizontal
+    const c = coeficientes(w, TAM); tmp = new Uint8Array(TAM * h); tw = TAM;
+    for (let y = 0; y < h; y++) for (let x = 0; x < TAM; x++) {
+      let s = 1 << (PREC - 1); const { xmin, kk } = c[x];
+      for (let i = 0; i < kk.length; i++) s += gris[y * w + xmin + i] * kk[i];
+      tmp[y * TAM + x] = clip8(s);
+    }
+  }
+  if (h === TAM) return tmp;
+  const c = coeficientes(h, TAM), out = new Uint8Array(TAM * TAM);   // pasada vertical
+  for (let y = 0; y < TAM; y++) { const { xmin, kk } = c[y];
+    for (let x = 0; x < tw; x++) {
+      let s = 1 << (PREC - 1);
+      for (let i = 0; i < kk.length; i++) s += tmp[(xmin + i) * tw + x] * kk[i];
+      out[y * TAM + x] = clip8(s);
+    }
+  }
+  return out;
+}
+
+async function analizar() {
+  const f = archivoActual; if (!f || !sesion) return;
+  const ext = (f.name.split(".").pop() || "").toLowerCase();
+  if (!["png", "jpg", "jpeg"].includes(ext)) return mostrar(`<div class="resultado error">❌ Formato no admitido (.${ext}). Use PNG o JPG; para DICOM, la app principal.</div>`);
+  if (f.size > MAX_MB * 1e6) return mostrar(`<div class="resultado error">❌ Archivo demasiado grande (&gt; ${MAX_MB} MB).</div>`);
+  let bmp;
+  try { bmp = await createImageBitmap(f, { colorSpaceConversion: "none", premultiplyAlpha: "none" }); }
+  catch (e) { return mostrar(`<div class="resultado error">❌ No se pudo leer la imagen. ¿Es un archivo de imagen válido?</div>`); }
+  const w = bmp.width, h = bmp.height;
+  if (Math.min(w, h) < MIN_LADO) return mostrar(`<div class="resultado error">❌ Imagen demasiado pequeña (${w}x${h} px).</div>`);
+  $("estado").textContent = "Analizando…";
+  const cv = new OffscreenCanvas(w, h), cx = cv.getContext("2d", { willReadFrequently: true });
+  cx.drawImage(bmp, 0, 0); const px = cx.getImageData(0, 0, w, h).data;
+  // Escala de grises como Pillow (convert("L")): L = (19595 R + 38470 G + 7471 B + 32768) >> 16
+  const gris = new Uint8Array(w * h);
+  for (let i = 0, j = 0; i < gris.length; i++, j += 4) gris[i] = (px[j] * 19595 + px[j + 1] * 38470 + px[j + 2] * 7471 + 32768) >> 16;
+  const r = redimensionarL(gris, w, h);
+  const datos = new Float32Array(3 * TAM * TAM);
+  for (let c = 0; c < 3; c++) for (let i = 0; i < TAM * TAM; i++) datos[c * TAM * TAM + i] = (r[i] / 255 - MEDIA[c]) / DESV[c];
+  const vista = $("vista").getContext("2d"), img = vista.createImageData(TAM, TAM);
+  for (let i = 0; i < TAM * TAM; i++) { img.data[4 * i] = img.data[4 * i + 1] = img.data[4 * i + 2] = r[i]; img.data[4 * i + 3] = 255; }
+  vista.putImageData(img, 0, 0);
+  const t0 = performance.now();
+  const salida = await sesion.run({ [sesion.inputNames[0]]: new ort.Tensor("float32", datos, [1, 3, TAM, TAM]) });
+  const logit = salida[sesion.outputNames[0]].data[0], punt = 1 / (1 + Math.exp(-logit));
+  const ms = Math.round(performance.now() - t0), u = Number($("umbral").value);
+  const maligna = punt >= u;
+  const avisos = Math.min(w, h) > MAX_LADO_RECORTE
+    ? `<div class="resultado aviso2">⚠️ La imagen parece una <b>mamografía completa</b>. El modelo fue entrenado con <b>recortes de lesión (ROI)</b>; el resultado puede no ser válido.</div>` : "";
+  mostrar(`${avisos}<div class="resultado ${maligna ? "maligna" : "benigna"}">Patrón asociado a lesión <b>${maligna ? "MALIGNA" : "BENIGNA"}</b></div>
+    <ul class="datos"><li>Puntuación del modelo: <b>${punt.toFixed(3)}</b> (0 = benigna, 1 = maligna)</li>
+    <li>Umbral de decisión: <b>${u.toFixed(3)}</b> (elegido en validación: ${UMBRAL_VALIDACION.toFixed(3)})</li>
+    <li>Tamaño de la imagen: ${w}x${h} px · ${ms} ms</li></ul>
+    <p class="nota"><i>La puntuación NO es una probabilidad clínica calibrada.</i><br>⚠️ Prototipo académico; no apto para diagnóstico ni decisiones clínicas.</p>`);
+  $("estado").textContent = "Listo.";
+}
+</script>
+</body>
+</html>
