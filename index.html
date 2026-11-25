@@ -33,7 +33,9 @@
   @media (max-width: 760px) { .rejilla { grid-template-columns: 1fr; } }
   .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; min-width: 0; }
   .tarjeta h2 { font-size: 1.05rem; margin: 0 0 10px; }
-  .zona { border: 2px dashed var(--borde); border-radius: 10px; padding: 22px 12px; text-align: center; cursor: pointer; color: var(--suave); }
+  /* display:block: un <label> es en línea por defecto y el borde se partía entre renglones */
+  .zona { display: block; border: 2px dashed var(--borde); border-radius: 10px; padding: 22px 12px; text-align: center; cursor: pointer; color: var(--suave); line-height: 1.5; }
+  .zona strong { display: block; color: var(--texto); margin-bottom: 4px; }
   .zona.encima { border-color: var(--acento); background: var(--acento-suave); }
   .zona input { display: none; }
   label.umbral { display: block; margin-top: 14px; font-size: .95rem; }
