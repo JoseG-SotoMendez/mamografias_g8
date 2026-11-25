@@ -22,9 +22,11 @@ Construimos un prototipo que recibe el **recorte de una lesión** ya marcada en 
 
 ## 2. Los datos
 
-**Fuente.** CBIS-DDSM (*Curated Breast Imaging Subset of DDSM*), de The Cancer Imaging Archive, con licencia **CC BY 3.0** (DOI 10.7937/K9/TCIA.2016.7O02S9CY). Usamos la copia en JPEG de Kaggle (`awsaf49/cbis-ddsm-breast-cancer-image-dataset`), que conserva los CSV oficiales con la patología de cada lesión y el archivo `dicom_info.csv` para ubicar cada recorte. Los DICOM originales pesan unos 160 GB; la versión JPEG cabe en Colab. Son mamografías de **película escaneada**, de hospitales de Estados Unidos y de los años noventa.
+**Fuente.** CBIS-DDSM (*Curated Breast Imaging Subset of DDSM*; Lee et al., 2017; Sawyer-Lee et al., 2016), de The Cancer Imaging Archive, con licencia **CC BY 3.0** (DOI 10.7937/K9/TCIA.2016.7O02S9CY). Usamos la copia en JPEG de Kaggle (`awsaf49/cbis-ddsm-breast-cancer-image-dataset`), que conserva los CSV oficiales con la patología de cada lesión y el archivo `dicom_info.csv` para ubicar cada recorte. Los DICOM originales pesan unos 160 GB; la versión JPEG cabe en Colab. Son mamografías de **película escaneada**, de hospitales de Estados Unidos y de los años noventa.
 
 **Cantidades.** Los cuatro CSV (masas y calcificaciones, entrenamiento y prueba oficiales) describen 3.568 lesiones. Dos no tenían recorte y se descartaron, y no hubo archivos repetidos (comparamos el MD5 de cada imagen). Quedaron **3.566 lesiones de 1.566 pacientes** (2,3 por paciente en promedio y hasta 24 en una misma paciente): 1.870 calcificaciones y 1.696 masas, 1.894 en vista MLO y 1.672 en CC. Cada fila es una lesión **en una vista**, así que la misma lesión vista en CC y en MLO cuenta dos veces.
+
+Tabla: Mapeo de la etiqueta original de CBIS-DDSM a la etiqueta del proyecto
 
 | Etiqueta original (`pathology`) | Etiqueta del proyecto | Lesiones |
 |---|---|---|
@@ -37,8 +39,6 @@ Construimos un prototipo que recibe el **recorte de una lesión** ya marcada en 
 **Lo que vimos en el análisis exploratorio.** El 40,8 % de las lesiones es maligno: hay algo de desbalance (6 benignas por cada 4 malignas), pero no tanto como para remuestrear. Los dos tipos no se reparten igual: las masas son 46 % malignas y las calcificaciones 36 %, y el 79 % de las BWC son calcificaciones. Los recortes van de 68 a 2.893 píxeles de ancho (mediana 340 × 337), y como todos se llevan a 224 × 224, los grandes se reducen más de diez veces. Eso le pega sobre todo a las calcificaciones, que son puntos finos. No hubo imágenes ilegibles.
 
 ![Figura 1. Ejemplos de recortes de entrenamiento: benignas arriba y malignas abajo (CBIS-DDSM, CC BY 3.0).](figuras/ejemplos_eda.png)
-
-![Figura 2. Balance de clases por partición (izquierda) y lesiones por tipo y patología original (derecha).](figuras/eda_balance_tipo.png)
 
 **Sesgos posibles.** Película escaneada en vez de mamografía digital; una población y una época concretas; casos que entraron al conjunto porque tenían una lesión (el modelo nunca vio una mamografía normal); calidad de escaneo variable; y la mezcla desigual de tipos y de BWC, que puede hacer que el modelo aprenda atajos del tipo de lesión en vez de la patología.
 
@@ -56,25 +56,29 @@ Construimos un prototipo que recibe el **recorte de una lesión** ya marcada en 
 
 **Cuántos modelos entrenamos.** Hicimos **cinco corridas con dos arquitecturas** y una corrida piloto de una época con 200 imágenes, solo para comprobar que el código funcionaba en Colab (no se usó para nada más). Todas comparten la partición, la semilla 42, la pérdida `BCEWithLogitsLoss`, el optimizador AdamW (*weight decay* 1e-4), una tasa de aprendizaje con decaimiento coseno, lotes de 32, imágenes de 224 px, precisión mixta (AMP) y parada temprana por el ROC-AUC de validación, guardando los pesos de la mejor época. Corrimos todo en Google Colab con una GPU Tesla T4 (15 GB), PyTorch 2.14 y Python 3.13.
 
-| Corrida | Modelo | Qué la distingue | Datos | Épocas máx. (mejor; paró en) | lr | Tiempo |
-|---|---|---|---|---|---|---|
-| R0 | CNN pequeña (4 bloques, 98.049 parámetros) | línea base desde cero | 2.527 | 25 (5; 10) | 1e-3 | 3,7 min |
-| R1 | ResNet18 preentrenada (11.177.025 parámetros) | con aumentos | 2.527 | 15 (12; 15) | 1e-4 | 5,8 min |
-| R2 | ResNet18 preentrenada | **sin** aumentos (experimento controlado) | 2.527 | 15 (1; 6) | 1e-4 | 1,9 min |
-| R3 | ResNet18 preentrenada | más épocas: hasta 30, paciencia 7 | 2.527 | 30 (10; 17) | 1e-4 | 6,8 min |
-| R4 | ResNet18 preentrenada | más datos: entrenamiento + validación | 3.048 | 10 fijas (de R3) | 1e-4 | 3,8 min |
+Tabla: Corridas de entrenamiento y su configuración
 
-**R0, el piso.** Una red pequeña entrenada desde cero nos dice cuánto aporta la transferencia de aprendizaje. Si ResNet18 no la superaba con claridad, algo andaba mal en el pipeline.
+| Corrida | Modelo | Qué la distingue | Datos | Épocas máx. (mejor; paró en) | Tasa de aprendizaje | Tiempo |
+|---|---|---|---|---|---|---|
+| R0 | CNN pequeña (4 bloques, 98.049 parámetros) | línea base desde cero | 2.527 | 25 (5; 10) | 0,001 | 3,7 min |
+| R1 | ResNet18 preentrenada (11.177.025 parámetros) | con aumentos | 2.527 | 15 (12; 15) | 0,0001 | 5,8 min |
+| R2 | ResNet18 preentrenada | **sin** aumentos (experimento controlado) | 2.527 | 15 (1; 6) | 0,0001 | 1,9 min |
+| R3 | ResNet18 preentrenada | más épocas: hasta 30, paciencia 7 | 2.527 | 30 (10; 17) | 0,0001 | 6,8 min |
+| R4 | ResNet18 preentrenada | más datos: entrenamiento + validación | 3.048 | 10 fijas (de R3) | 0,0001 | 3,8 min |
+
+**R0, el piso.** Una red pequeña entrenada desde cero, frente a la ResNet18 de He et al. (2016), nos dice cuánto aporta la transferencia de aprendizaje. Si ResNet18 no la superaba con claridad, algo andaba mal en el pipeline.
 
 **El experimento controlado (R1 contra R2).** Lo único que cambia es la bandera `--aug`. Modelo, pesos iniciales, datos, semilla, lr, épocas y lote son iguales, así que cualquier diferencia se puede atribuir a los aumentos y no a una mezcla de cambios.
 
-**Lo que vimos al entrenar (estabilidad).** R0 fue la más inestable. Con lr = 1e-3 su AUC de validación se movió entre 0,67 y 0,69 y en la época 8 se desplomó a 0,47, cuando el modelo empezó a llamar benignas a todas las lesiones; la parada temprana conservó la época 5 (0,694). R2 memorizó rapidísimo: la pérdida de entrenamiento bajó de 0,595 a 0,028 en seis épocas mientras la de validación subía de 0,567 a 0,906, y su mejor AUC fue el de la primera época. R1 fue la más estable: tuvo un bache en la época 2 (0,72), luego subió de forma sostenida y en las últimas cuatro épocas se quedó entre 0,812 y 0,819, cuando el coseno ya había bajado la tasa de aprendizaje. Un detalle que nos sirvió para confiar en la semilla: R1 y R3 dan exactamente la misma pérdida en la primera época (0,6138) y solo se separan cuando su tasa de aprendizaje empieza a bajar a ritmos distintos.
+**Lo que vimos al entrenar (estabilidad).** R0 fue la más inestable. Con lr = 1e-3 su AUC de validación se movió entre 0,67 y 0,69 y en la época 8 se desplomó a 0,47, cuando el modelo empezó a llamar benignas a todas las lesiones; la parada temprana conservó la época 5 (0,694). R2 memorizó rapidísimo: la pérdida de entrenamiento bajó de 0,595 a 0,028 en seis épocas mientras la de validación subía de 0,567 a 0,906, y su mejor AUC fue el de la primera época. R1 fue la más estable: tuvo un bache en la época 2 (0,72), luego subió de forma sostenida y en las últimas cuatro épocas se quedó entre 0,812 y 0,819, cuando el coseno ya había bajado la tasa de aprendizaje. Además, R1 y R3 dan exactamente la misma pérdida en la primera época (0,6138), lo que confirma que la semilla hace reproducible el entrenamiento.
 
-![Figura 3. Pérdida de entrenamiento y de validación por época: R1 con aumentos (izquierda) y R2 sin aumentos (derecha).](figuras/curvas_r1_r2.png)
+![Figura 2. Pérdida de entrenamiento y de validación por época: R1 con aumentos (izquierda) y R2 sin aumentos (derecha).](figuras/curvas_r1_r2.png)
 
 ### 4.1 Costo computacional: memoria, GPU y tiempos
 
 Queríamos saber si el modelo es pesado de entrenar y de poner en producción. Medimos con `src/medir_recursos.py` (unos pasos de entrenamiento con imágenes reales, sin tocar validación ni prueba). En GPU usamos una T4 de Colab; en CPU, el portátil de uno de nosotros (AMD Ryzen 7 7435HS, 4 hilos).
+
+Tabla: Costo computacional de cada arquitectura
 
 | Modelo | Parámetros | Pesos | Memoria GPU al entrenar (lote 32, AMP) | Paso de entrenamiento en GPU | Predicción en CPU (1 imagen) | Memoria extra en CPU |
 |---|---|---|---|---|---|---|
@@ -84,9 +88,9 @@ Queríamos saber si el modelo es pesado de entrenar y de poner en producción. M
 
 Lo que sacamos de esto:
 
-- **La GPU no fue el cuello de botella.** Entrenar ResNet18 con lotes de 32 ocupó como máximo 572 MB de los 15 GB de la T4 (menos del 4 %), así que nos sobró memoria de lejos; podríamos haber usado lotes mucho más grandes o imágenes de más resolución. Lo curioso es EfficientNet-B0: tiene casi tres veces menos parámetros que ResNet18, pero gasta 2,5 veces más memoria al entrenar y cada paso tarda casi el doble, porque guarda muchas más activaciones intermedias. El número de parámetros no lo dice todo. En GPU, ResNet18 procesa unas 630 imágenes por segundo al entrenar, así que una época de 2.527 imágenes necesita unos 4 s de cálculo. Pero cada época real tardó unos 22 s, y casi lo mismo con la red pequeña que con ResNet18 (`log.csv`), aunque una tiene 100 veces más parámetros que la otra. O sea que cerca del 80 % del tiempo se iba en **leer, decodificar y aumentar los JPEG** con solo 2 procesos de carga, no en calcular: la GPU pasaba la mayor parte del tiempo esperando. Entrenar R1 completa tomó menos de seis minutos.
-- **En producción alcanza con CPU.** Una predicción de ResNet18 tarda unos 53 ms en el portátil. Python con PyTorch ya ocupa unos 320 MB antes de cargar el modelo, y el modelo con una predicción suma unos 57 MB más. La app de Gradio completa, con el modelo cargado, ocupó unos 510 MB de RAM. Por eso no hizo falta pagar un servidor con GPU (sección 6).
-- **EfficientNet-B0** es más liviana (4 millones de parámetros) y en CPU va un poco más rápido, pero no la entrenamos: el enunciado pedía una línea base y una red con transferencia, y con el tiempo que teníamos preferimos hacer bien el experimento controlado con una sola arquitectura. Queda como siguiente paso natural.
+- **La GPU no fue el cuello de botella.** Entrenar ResNet18 con lotes de 32 ocupó como máximo 572 MB de los 15 GB de la T4 (menos del 4 %). Lo curioso es EfficientNet-B0: tiene casi tres veces menos parámetros que ResNet18, pero gasta 2,5 veces más memoria y cada paso tarda casi el doble, porque guarda muchas más activaciones; el número de parámetros no lo dice todo. ResNet18 procesa unas 630 imágenes por segundo en la GPU, o sea unos 4 s de cálculo por época, pero cada época real tardó unos 22 s, casi lo mismo con la red pequeña (`log.csv`). Cerca del 80 % del tiempo se iba en **leer y decodificar los JPEG**, no en calcular.
+- **En producción alcanza con CPU.** Una predicción de ResNet18 tarda unos 53 ms en el portátil y el modelo suma unos 57 MB a los ~320 MB que ya ocupa Python con PyTorch; la app de Gradio completa ocupó unos 510 MB. No hace falta un servidor con GPU (sección 6).
+- **EfficientNet-B0** (Tan & Le, 2019) solo la medimos, no la entrenamos: preferimos hacer bien el experimento controlado con una sola arquitectura. Queda como siguiente paso.
 
 ## 5. Evaluación
 
@@ -97,6 +101,8 @@ La salida del modelo es una **puntuación** (la sigmoide de un logit), no una pr
 ### 5.2 ¿Cuál modelo fue el mejor?
 
 Validación: 521 lesiones (222 malignas y 299 benignas) de 225 pacientes. Cada corrida se evalúa con su propio umbral para sensibilidad ≥ 0,90, así que todas atrapan más o menos las mismas malignas y la diferencia está en cuántas benignas marcan de más.
+
+Tabla: Comparación de las corridas en validación (umbral propio para sensibilidad ≥ 0,90)
 
 | Corrida | ROC-AUC | Umbral | Sensibilidad | Especificidad | Precisión | F1 | FN | FP |
 |---|---|---|---|---|---|---|---|---|
@@ -111,10 +117,14 @@ Validación: 521 lesiones (222 malignas y 299 benignas) de 225 pacientes. Cada c
 
 Con el modelo y el umbral ya fijos, evaluamos la prueba **una sola vez**, el 18-nov a las 11:53 (queda constancia en `registro_uso_test.txt`). Son 518 lesiones (200 malignas y 318 benignas) de 226 pacientes que el modelo nunca vio.
 
+Tabla: Matriz de confusión de R1 en la prueba reservada (umbral 0,066)
+
 | | Predice benigna | Predice maligna |
 |---|---|---|
 | **Es benigna** (318) | VN = 146 | FP = 172 |
 | **Es maligna** (200) | FN = 22 | VP = 178 |
+
+Tabla: Métricas de R1 en la prueba reservada
 
 | Sensibilidad maligna | Especificidad | Precisión | F1 | ROC-AUC | Exactitud |
 |---|---|---|---|---|---|
@@ -122,9 +132,11 @@ Con el modelo y el umbral ya fijos, evaluamos la prueba **una sola vez**, el 18-
 
 En palabras: de cada 100 lesiones malignas, el modelo deja pasar 11 como benignas; a cambio, marca como sospechosas a más de la mitad de las benignas (172 de 318). Todo bajó un poco respecto a validación (AUC 0,819 → 0,788; sensibilidad 0,901 → 0,890; especificidad 0,518 → 0,459), que es lo normal cuando modelo y umbral se eligieron mirando validación.
 
-![Figura 4. Matriz de confusión y curva ROC de R1 en la prueba reservada.](figuras/test_matriz_roc.png)
+![Figura 3. Matriz de confusión y curva ROC de R1 en la prueba reservada.](figuras/test_matriz_roc.png)
 
 **¿Qué pasa si se mueve el umbral?** (validación, R1, `tabla_umbrales.csv`)
+
+Tabla: Efecto del umbral sobre los errores de R1 en validación
 
 | Umbral | Sensibilidad | Especificidad | FN (de 222) | FP (de 299) |
 |---|---|---|---|---|
@@ -142,7 +154,9 @@ En la revisión del día 7 el profesor nos pidió entrenar más, con más datos,
 
 - **Más épocas (R3).** La mejor época fue la 10 (AUC 0,812) y después el modelo empezó a memorizar: la pérdida de validación subió de 0,59 a 0,87 mientras la de entrenamiento seguía bajando. R1 ya estaba cerca de su techo con 15 épocas.
 - **Más datos (R4).** Entrenamos con entrenamiento + validación (3.048 lesiones, +21 %) durante las 10 épocas que eligió R3, y tomamos el umbral de R3. No repartimos de nuevo los datos, porque habría tocado la prueba ya usada.
-- **Imágenes nuevas: mini-MIAS.** Es otro conjunto (Reino Unido), con otro escáner, otra población y otra resolución. De sus 330 anotaciones quitamos 207 mamografías normales y 4 anomalías sin coordenadas, y quedaron **119 lesiones de 104 pacientes** (51 malignas y 68 benignas). Recortamos cada lesión con el centro y el radio de `Info.txt` (`src/prepare_mias.py`) y usamos el umbral de CBIS-DDSM sin reajustar nada.
+- **Imágenes nuevas: mini-MIAS** (Suckling et al., 1994). Es otro conjunto (Reino Unido), con otro escáner, otra población y otra resolución. De sus 330 anotaciones quitamos 207 mamografías normales y 4 anomalías sin coordenadas, y quedaron **119 lesiones de 104 pacientes** (51 malignas y 68 benignas). Recortamos cada lesión con el centro y el radio de `Info.txt` (`src/prepare_mias.py`) y usamos el umbral de CBIS-DDSM sin reajustar nada.
+
+Tabla: Desempeño en mini-MIAS con el umbral elegido en CBIS-DDSM
 
 | Modelo | ROC-AUC en mini-MIAS | Sensibilidad | Especificidad | FN | FP |
 |---|---|---|---|---|---|
@@ -156,6 +170,8 @@ El modelo conserva parte de su capacidad de **ordenar** las lesiones (AUC 0,71�
 
 **Método, fijado antes de mirar los casos** (`docs/analisis_errores.md`): en validación tomamos los falsos negativos de puntuación más baja y los falsos positivos de puntuación más alta (mínimo 4 de cada uno) y medimos la tasa de error por tipo de lesión, `subtlety` y `assessment` con `src/errores_por_grupo.py`. Así no escogemos a mano los casos "bonitos".
 
+Tabla: Tasa de error de R1 por grupo en validación
+
 | Grupo (R1, validación, umbral 0,066) | Lesiones | FN | FP | % de malignas que se escapan | % de benignas marcadas malignas |
 |---|---|---|---|---|---|
 | Calcificaciones | 273 | 14 | 69 | 13,1 | 41,6 |
@@ -167,45 +183,47 @@ En la prueba se repite el patrón: **17 de los 22 cánceres que se escapan son c
 
 **Qué tienen en común los errores.** Los cánceres que se escapan no son los sutiles: varios tenían `subtlety` 4 y BI-RADS 4–5, o sea que el radiólogo los vio claros. Lo más probable es que los puntos finos de las calcificaciones se pierdan al reducir el recorte a 224 px. Los falsos positivos se concentran en benignas que también le parecieron sospechosas al radiólogo (con `assessment` 4 se marca el 61 %), así que muchas de las "falsas alarmas" son casos difíciles de verdad. Para reducirlos probaríamos más resolución o recortes en mosaico para las calcificaciones.
 
-| Error | Caso | Puntuación | Tipo | Hipótesis |
-|---|---|---|---|---|
-| FN | P_00479_LEFT_CC_calcification_1 | 0,0002 | calcificación | puntos finos que se pierden al reducir a 224 px |
-| FN | P_00644_LEFT_CC_mass_1 | 0,0076 | masa | masa grande de borde definido; el recorte no muestra el tejido alrededor |
-| FP | P_00250_LEFT_MLO_calcification_1 | 0,992 | calcificación | recorte angosto, deformado al llevarlo a 224 × 224 |
-| FP | P_00120_LEFT_MLO_mass_1 | 0,956 | masa | masa muy densa que satura el recorte |
+Los casos concretos (los cuatro primeros falsos negativos y falsos positivos de cada lista, con su puntuación, tipo de lesión, `subtlety`, `assessment` y nuestra hipótesis) están en el Anexo F.
 
 ## 6. Interfaz y despliegue
 
-**La app (Gradio, `app.py`).** Recibe un recorte en PNG, JPG o DICOM y devuelve la imagen preprocesada (224 × 224), la puntuación del modelo, el umbral (por defecto el de validación, 0,066, con un deslizador de paso 0,001 para explorar) y la clase. El aviso «Prototipo académico; no apto para diagnóstico ni decisiones clínicas» está siempre visible, junto con la nota de que la puntuación no es una probabilidad. Rechaza con un mensaje claro los formatos no admitidos, los archivos que no son imagen, los de más de 50 MB y las imágenes de menos de 32 px. Si el lado corto de la imagen pasa de 2.893 px (el recorte más grande que vimos en el EDA), responde pero advierte que parece una **mamografía completa** y que el resultado puede no valer. Decidimos advertir en vez de rechazar para no bloquear recortes grandes legítimos.
+**La app (Gradio, `app.py`).** Recibe un recorte en PNG, JPG o DICOM y devuelve la imagen preprocesada (224 × 224), la puntuación del modelo, el umbral (por defecto el de validación, 0,066, con un deslizador de paso 0,001 para explorar) y la clase. El aviso «Prototipo académico; no apto para diagnóstico ni decisiones clínicas» está siempre visible, junto con la nota de que la puntuación no es una probabilidad. Rechaza con un mensaje claro los formatos no admitidos, los archivos que no son imagen, los de más de 50 MB y las imágenes de menos de 32 px. Si el lado corto de la imagen pasa de 2.893 px (el recorte más grande que vimos en el EDA), responde pero advierte que parece una **mamografía completa** y que el resultado puede no valer. Decidimos advertir en vez de rechazar para no bloquear recortes grandes legítimos. Las capturas de la app están en la guía de uso y en `docs/capturas/`.
 
 **Disponible las 24 horas.** Un enlace de Colab muere cuando se cierra la sesión, así que publicamos el modelo en dos sitios que no dependen de ningún computador nuestro:
 
 1. **Hugging Face Spaces:** https://huggingface.co/spaces/JostGreen/mamografias-g8-web
 2. **GitHub Pages (copia de respaldo):** https://joseg-sotomendez.github.io/mamografias_g8/
 
-Las dos ejecutan el mismo modelo R1 exportado a ONNX **dentro del navegador**, con el mismo preprocesamiento (escala de grises, redimensionado bilineal igual al de Pillow y normalización de ImageNet), el mismo umbral de validación y las mismas validaciones de la app. Como son páginas estáticas, no tienen un servidor que se duerma o se caiga, y la imagen nunca sale del equipo de quien la usa. Antes de publicarlas comprobamos que dan la misma puntuación que PyTorch: la diferencia máxima entre PyTorch y ONNX fue de 1e-6, y en el navegador las imágenes de prueba dieron las mismas tres cifras decimales que en la app de Gradio (por ejemplo, 0,008 para una benigna, en unos 250 ms). La app de Gradio sigue en el repositorio (`python app.py --run runs/R1_resnet18_aug`) y quedó empaquetada para un Space de Gradio (`deploy/`), pero Hugging Face cobra ese tipo de Space a las cuentas nuevas, así que la publicamos de esta otra forma.
+Las dos ejecutan el modelo R1 exportado a ONNX **dentro del navegador**, con el mismo preprocesamiento, umbral y validaciones de la app. Al ser páginas estáticas no tienen un servidor que se duerma, y la imagen no sale del equipo de quien la usa. Comprobamos que dan la misma puntuación que PyTorch (diferencia máxima de 1e-6; por ejemplo, 0,008 para una benigna en unos 250 ms). La app de Gradio sigue en el repositorio y quedó empaquetada para un Space de Gradio (`deploy/`), pero Hugging Face cobra ese tipo de Space a las cuentas nuevas.
 
 Además, un trabajo de GitHub Actions revisa cada 6 horas que las dos páginas y el archivo del modelo respondan; si alguna falla, nos llega un correo.
 
-![Figura 5. La app de Gradio con un recorte maligno (izquierda) y con una mamografía completa, donde muestra la advertencia (derecha).](figuras/capturas_app.png)
-
 ## 7. Límites
 
-- **Tamaño de muestra.** Son 2.527 recortes de entrenamiento para una red de 11 millones de parámetros, y 521 de validación: diferencias de 0,01–0,02 de AUC pueden ser ruido. Además usamos una sola semilla, así que no medimos cuánto cambian los resultados de una corrida a otra.
-- **Sesgo de selección.** Solo hay lesiones ya anotadas: el modelo nunca vio una mamografía normal ni tiene que encontrar la lesión. Que una lesión no esté anotada no significa que no haya cáncer.
-- **Generalización.** Son placas escaneadas de Estados Unidos de los noventa. En mini-MIAS el AUC bajó a 0,71 y el umbral dejó de servir. Nada de esto vale para mamografía digital ni para pacientes colombianas sin validarlo con datos locales.
-- **Interpretación clínica.** La puntuación no está calibrada y no es un riesgo. Con el umbral elegido se escapan 11 de cada 100 malignas, sobre todo calcificaciones: un «benigna» del modelo no descarta nada. Las métricas son por recorte, no por paciente.
-- **Interfaz.** El deslizador deja mover el umbral sin protección; la app no explica en qué parte de la imagen se fijó el modelo (no hicimos Grad-CAM) y no sabe decir «esto no es una mamografía»: solo revisa formato y tamaño.
+- **Tamaño de muestra y una sola semilla.** Con 521 lesiones de validación, diferencias de 0,01–0,02 de AUC pueden ser ruido, y no medimos cuánto cambian los resultados de una corrida a otra.
+- **Sesgo de selección.** Solo hay lesiones ya anotadas: el modelo nunca vio una mamografía normal ni tiene que encontrar la lesión.
+- **Generalización.** Son placas escaneadas de Estados Unidos de los noventa; en mini-MIAS el umbral dejó de servir. No vale para mamografía digital ni para pacientes de aquí sin validarlo con datos locales.
+- **Interpretación clínica.** La puntuación no es un riesgo y se escapan 11 de cada 100 malignas: un «benigna» del modelo no descarta nada. Las métricas son por recorte, no por paciente.
+- **Interfaz.** No explica en qué se fijó el modelo (no hicimos Grad-CAM) ni reconoce si la imagen no es una mamografía: solo revisa formato y tamaño.
 
 ## 8. Conclusiones
 
-1. Partir por paciente fue la decisión más importante: con 0 pacientes compartidas, las cifras de validación y prueba no están infladas por fuga.
-2. La transferencia de aprendizaje funciona con pocos datos: ResNet18 preentrenada le ganó a la red desde cero por 0,125 de AUC, y los aumentos le sumaron 0,037 y frenaron la memorización.
+1. Partir por paciente fue la decisión más importante: con 0 pacientes compartidas, las cifras no están infladas por fuga.
+2. La transferencia de aprendizaje funciona con pocos datos: ResNet18 preentrenada le ganó a la red desde cero por 0,125 de AUC, y los aumentos sumaron 0,037 y frenaron la memorización.
 3. Con el umbral elegido en validación, el modelo atrapa 89 de cada 100 malignas en la prueba, pero marca como sospechosas a más de la mitad de las benignas: es un filtro muy sensible, no un clasificador fino.
-4. Ni más épocas ni más datos del mismo dominio mejoraron el modelo. Las imágenes de otro escáner mostraron el límite real: el modelo ordena algo, pero su umbral no se transfiere.
-5. El modelo es liviano: entrena en menos de seis minutos en una GPU de Colab, predice en unos 50 ms en un portátil y corre incluso dentro del navegador, así que lo pudimos publicar 24/7 sin pagar un servidor con GPU.
-6. Con más tiempo probaríamos más resolución para las calcificaciones, Grad-CAM, EfficientNet-B0, varias semillas y una calibración de la puntuación en un conjunto aparte.
+4. Ni más épocas ni más datos del mismo dominio lo mejoraron; con otro escáner el umbral no se transfiere y habría que recalibrar.
+5. El modelo es liviano (menos de seis minutos de entrenamiento y unos 50 ms por imagen en un portátil), así que lo publicamos 24/7 sin un servidor con GPU. Con más tiempo probaríamos más resolución para las calcificaciones, Grad-CAM, EfficientNet-B0, varias semillas y una calibración de la puntuación.
 
-**Referencias.** Lee R. S. et al. (2017), *A curated mammography data set for use in computer-aided detection and diagnosis research*, Scientific Data 4:170177 · CBIS-DDSM, The Cancer Imaging Archive, DOI 10.7937/K9/TCIA.2016.7O02S9CY · Suckling J. et al. (1994), *The Mammographic Image Analysis Society digital mammogram database* (mini-MIAS) · He K. et al. (2016), *Deep Residual Learning for Image Recognition*, CVPR.
+## Referencias
+
+He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. En *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 770–778). https://doi.org/10.1109/CVPR.2016.90
+
+Lee, R. S., Gimenez, F., Hoogi, A., Miyake, K. K., Gorovoy, M., & Rubin, D. L. (2017). A curated mammography data set for use in computer-aided detection and diagnosis research. *Scientific Data, 4*, Artículo 170177. https://doi.org/10.1038/sdata.2017.177
+
+Sawyer-Lee, R., Gimenez, F., Hoogi, A., & Rubin, D. (2016). *Curated Breast Imaging Subset of Digital Database for Screening Mammography (CBIS-DDSM)* [Conjunto de datos]. The Cancer Imaging Archive. https://doi.org/10.7937/K9/TCIA.2016.7O02S9CY
+
+Suckling, J., Parker, J., Dance, D., Astley, S., Hutt, I., Boggis, C., Ricketts, I., Stamatakis, E., Cerneaz, N., Kok, S., Taylor, P., Betal, D., & Savage, J. (1994). The Mammographic Image Analysis Society digital mammogram database. *Excerpta Medica International Congress Series, 1069*, 375–378.
+
+Tan, M., & Le, Q. V. (2019). EfficientNet: Rethinking model scaling for convolutional neural networks. En *Proceedings of the 36th International Conference on Machine Learning* (pp. 6105–6114). PMLR.
 
 **Anexos** (documento aparte): tabla de etiquetas, hipótesis, bitácora, registro de uso de IA, análisis de errores completo y evidencia del control del día 7. Código, partición y comandos: https://github.com/JoseG-SotoMendez/mamografias_g8
