@@ -21,7 +21,13 @@ src/train.py              entrena una corrida (solo train/val)
 src/evaluate.py           umbral elegido en val; métricas, ROC, matriz, FN/FP
 src/inference.py          predicción de una imagen
 src/compare_runs.py       tabla comparativa de corridas
+src/errores_por_grupo.py  tasa de FN/FP por tipo de lesión, subtlety y assessment
+src/prepare_mias.py       recortes de mini-MIAS para la prueba externa
+src/evaluate_external.py  evalúa en un conjunto externo con el umbral de validación
+src/medir_recursos.py     memoria de GPU/CPU y tiempos de cada arquitectura
 src/common.py, models.py, metrics.py
+deploy/                   exportación a ONNX y armado del Space de Hugging Face
+web/                      versión que corre en el navegador (respaldo en GitHub Pages)
 notebooks/Colab_Mamografias.ipynb   flujo completo en Google Colab
 docs/                     informe, hipótesis, bitácora, registro de IA, tabla de etiquetas, guía de Colab, guía del día 7
 ```
@@ -64,6 +70,42 @@ python src/evaluate.py --run runs/<ganador> --split test --strategy sens --targe
 # 5. Interfaz
 python app.py --run runs/<ganador> --share
 ```
+
+### Indicaciones del día 7: más épocas, más datos y prueba externa
+```bash
+# Más épocas (validación elige la mejor) y modelo final con train+val
+python src/train.py --name R3_resnet18_aug_30ep --model resnet18 --epochs 30 --patience 7 --lr 1e-4 --aug
+python src/evaluate.py --run runs/R3_resnet18_aug_30ep --split val --strategy sens --target-sens 0.90
+python src/train.py --name R4_final_trainval --model resnet18 --epochs 10 --lr 1e-4 --aug --incluir-val
+
+# Prueba externa con mini-MIAS (Kaggle: kmader/mias-mammography), umbral fijado en validación de CBIS-DDSM
+python src/prepare_mias.py --root /ruta/mias --out data/externo/mias
+python src/evaluate_external.py --run runs/R1_resnet18_aug --csv data/externo/mias/lesiones_mias.csv
+python src/evaluate_external.py --run runs/R4_final_trainval --csv data/externo/mias/lesiones_mias.csv \
+       --threshold-from runs/R3_resnet18_aug_30ep/threshold.json
+```
+
+### Costo computacional
+```bash
+cd src && python medir_recursos.py --modelos smallcnn resnet18 efficientnet_b0 --out ../reports/recursos
+```
+Mide memoria de GPU y tiempo por paso al entrenar (si hay GPU) y latencia y memoria al predecir en CPU. Resultados en `reports/recursos/`.
+
+## App publicada (24/7)
+- **Hugging Face Spaces:** https://huggingface.co/spaces/JostGreen/mamografias-g8-web
+- **GitHub Pages (respaldo):** https://joseg-sotomendez.github.io/mamografias_g8/
+
+Las dos ejecutan el modelo R1 exportado a ONNX dentro del navegador (mismo preprocesamiento, mismo umbral de validación). La app de Gradio se corre con `python app.py --run runs/R1_resnet18_aug` y está empaquetada para un Space de Gradio en `deploy/` (Hugging Face cobra ese tipo de Space a cuentas nuevas).
+
+Cómo se arma (carpeta `deploy/`):
+```bash
+python deploy/exportar_onnx.py --run runs/R1_resnet18_aug --out web/modelo_r1.onnx --imagenes <carpeta de prueba>
+# Versión web: index.html + modelo_r1.onnx a la rama gh-pages y a un Space estático de Hugging Face
+# App de Gradio (opcional, requiere un Space de Gradio):
+python deploy/preparar_space.py --run runs/R1_resnet18_aug --ejemplos <carpeta de prueba> --out build/space
+hf upload <usuario>/mamografias-g8 build/space . --repo-type=space
+```
+`exportar_onnx.py` falla si la puntuación de ONNX difiere de la de PyTorch en más de 1e-4. El flujo `.github/workflows/vigilante_app.yml` revisa cada 6 horas que las dos páginas y el modelo respondan (y la app de Gradio, si se define la variable `HF_SPACE`); si algo falla, GitHub avisa por correo.
 
 ## Reproducibilidad
 - Semilla fija (`--seed 42`) en partición y entrenamiento; `config.json` de cada corrida guarda todos los parámetros, versión de PyTorch, GPU, commit de git y tiempos.

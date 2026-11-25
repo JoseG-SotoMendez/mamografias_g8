@@ -84,4 +84,14 @@ Por `pathology` de las benignas (conteo aparte sobre `falsos_positivos.csv`): 12
 - La vista (CC o MLO) no cambia nada: 9,5 % vs 10,3 % de FN.
 
 ## Errores en prueba (solo se reportan)
-<<PENDIENTE: tras la evaluación final>>
+
+R1 en la prueba reservada (evaluada una sola vez, umbral 0,066 de validación): **22 FN de 200 malignas y 172 FP de 318 benignas** (`runs/R1_resnet18_aug/eval_test/metricas.json`). No se usaron para cambiar nada: ni el modelo, ni el umbral, ni el método. Los conteos por grupo salen de `predicciones.csv` de la prueba (los hizo Andrés para revisar sus decisiones de datos, informe §5.5 y bitácora del 24-nov):
+
+| Grupo (prueba) | Lesiones | Errores | Métrica | ROC-AUC del grupo |
+|---|---|---|---|---|
+| Calcificaciones malignas | 102 | 17 FN | sensibilidad 0,83 | 0,744 (todas las calcificaciones) |
+| Masas malignas | 98 | 5 FN | sensibilidad 0,95 | 0,837 (todas las masas) |
+| Benignas `BENIGN` | 204 | 141 FP | especificidad 0,31 | 0,730 (malignas vs `BENIGN`) |
+| Benignas `BENIGN_WITHOUT_CALLBACK` | 114 | 31 FP | especificidad 0,73 | 0,892 (malignas vs BWC) |
+
+**Lectura.** La prueba confirma lo que vimos en validación con el método fijado antes: el punto débil son las calcificaciones (17 de los 22 FN) y las falsas alarmas se concentran en las benignas que sí generaron seguimiento, no en las BWC. Como en validación, no es un problema de lesiones sutiles sino, muy probablemente, de resolución: el detalle fino de las calcificaciones se pierde al reducir el recorte a 224 px.
