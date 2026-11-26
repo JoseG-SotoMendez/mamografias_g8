@@ -189,14 +189,13 @@ Los casos concretos (los cuatro primeros falsos negativos y falsos positivos de 
 
 **La app (Gradio, `app.py`).** Recibe un recorte en PNG, JPG o DICOM y devuelve la imagen preprocesada (224 × 224), la puntuación del modelo, el umbral (por defecto el de validación, 0,066, con un deslizador de paso 0,001 para explorar) y la clase. El aviso «Prototipo académico; no apto para diagnóstico ni decisiones clínicas» está siempre visible, junto con la nota de que la puntuación no es una probabilidad. Rechaza con un mensaje claro los formatos no admitidos, los archivos que no son imagen, los de más de 50 MB y las imágenes de menos de 32 px. Si el lado corto de la imagen pasa de 2.893 px (el recorte más grande que vimos en el EDA), responde pero advierte que parece una **mamografía completa** y que el resultado puede no valer. Decidimos advertir en vez de rechazar para no bloquear recortes grandes legítimos. Las capturas de la app están en la guía de uso y en `docs/capturas/`.
 
-**Disponible las 24 horas.** Un enlace de Colab muere cuando se cierra la sesión, así que publicamos el modelo en dos sitios que no dependen de ningún computador nuestro:
+**Disponible las 24 horas.** Un enlace de Colab muere cuando se cierra la sesión, así que publicamos la app en servidores que no dependen de ningún computador nuestro:
 
-1. **Hugging Face Spaces:** https://huggingface.co/spaces/JostGreen/mamografias-g8-web
-2. **GitHub Pages (copia de respaldo):** https://joseg-sotomendez.github.io/mamografias_g8/
+1. **App de Gradio en Render:** https://mamografias-g8.onrender.com
+2. **Versión que corre en el navegador, en Hugging Face Spaces:** https://huggingface.co/spaces/JostGreen/mamografias-g8-web
+3. **Copia de respaldo en GitHub Pages:** https://joseg-sotomendez.github.io/mamografias_g8/
 
-Las dos ejecutan el modelo R1 exportado a ONNX **dentro del navegador**, con el mismo preprocesamiento, umbral y validaciones de la app. Al ser páginas estáticas no tienen un servidor que se duerma, y la imagen no sale del equipo de quien la usa. Comprobamos que dan la misma puntuación que PyTorch (diferencia máxima de 1e-6; por ejemplo, 0,008 para una benigna en unos 250 ms). La app de Gradio sigue en el repositorio y quedó empaquetada para un Space de Gradio (`deploy/`), pero Hugging Face cobra ese tipo de Space a las cuentas nuevas.
-
-Además, un trabajo de GitHub Actions revisa cada 6 horas que las dos páginas y el archivo del modelo respondan; si alguna falla, nos llega un correo.
+En Render usamos la misma interfaz de Gradio, pero la predicción la hace el modelo exportado a ONNX: el plan gratis tiene 512 MB de RAM y la app con PyTorch ocupaba unos 510 MB, mientras que con ONNX ocupa unos 220 MB. Las otras dos versiones ejecutan ese mismo modelo dentro del navegador. Comprobamos que las tres dan la misma puntuación que PyTorch con las imágenes de prueba (por ejemplo, 0,008 para una benigna de CBIS-DDSM). Un trabajo de GitHub Actions visita la app de Render cada 10 minutos para que no se apague por inactividad, y otro la prueba cada 6 horas con una imagen; si algo falla, nos llega un correo.
 
 ## 7. Límites
 

@@ -92,10 +92,11 @@ cd src && python medir_recursos.py --modelos smallcnn resnet18 efficientnet_b0 -
 Mide memoria de GPU y tiempo por paso al entrenar (si hay GPU) y latencia y memoria al predecir en CPU. Resultados en `reports/recursos/`.
 
 ## App publicada (24/7)
+- **App de Gradio en Render:** https://mamografias-g8.onrender.com (`render.yaml`, `deploy/render/`)
 - **Hugging Face Spaces:** https://huggingface.co/spaces/JostGreen/mamografias-g8-web
 - **GitHub Pages (respaldo):** https://joseg-sotomendez.github.io/mamografias_g8/
 
-Las dos ejecutan el modelo R1 exportado a ONNX dentro del navegador (mismo preprocesamiento, mismo umbral de validación). La app de Gradio se corre con `python app.py --run runs/R1_resnet18_aug` y está empaquetada para un Space de Gradio en `deploy/` (Hugging Face cobra ese tipo de Space a cuentas nuevas).
+La de Render es la interfaz de `app.py` con el modelo exportado a ONNX (cabe en los 512 MB del plan gratis); las otras dos ejecutan ese modelo dentro del navegador. Todas usan el mismo preprocesamiento y el umbral de validación. `despertar_render.yml` visita Render cada 10 minutos para que no se apague.
 
 Cómo se arma (carpeta `deploy/`):
 ```bash
