@@ -1,0 +1,17 @@
+# Despliegue de la app de Gradio en Render (plan gratis).
+# Render lee este archivo al crear el servicio con "New > Blueprint" desde este repositorio.
+services:
+  - type: web
+    name: mamografias-g8
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r deploy/render/requirements.txt && python deploy/render/descargar_recursos.py
+    startCommand: python deploy/render/app_render.py
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GRADIO_ANALYTICS_ENABLED
+        value: "False"

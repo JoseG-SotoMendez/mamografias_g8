@@ -30,3 +30,7 @@ venv/
 # Despliegue: el modelo ONNX se publica en la rama gh-pages, no en main
 web/*.onnx
 build/
+
+# Render: el modelo y los ejemplos se descargan al construir (no van al repositorio)
+deploy/render/modelo_r1.onnx
+deploy/render/ejemplos/

@@ -13,8 +13,13 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import gradio as gr  # noqa: E402
 
-from common import load_image  # noqa: E402
-from inference import Predictor  # noqa: E402
+# PyTorch se importa solo cuando hace falta: así la misma interfaz sirve para la versión con ONNX
+# (deploy/render/app_render.py), que corre sin PyTorch en un servidor con poca memoria.
+
+
+def _cargar_con_pytorch(path):
+    from common import load_image
+    return load_image(path)
 
 AVISO = "⚠️ **Prototipo académico; no apto para diagnóstico ni decisiones clínicas.**"
 FORMATOS = (".png", ".jpg", ".jpeg", ".dcm")
@@ -24,7 +29,9 @@ MAX_MB = 50
 MAX_LADO_RECORTE = 2893
 
 
-def build_app(pred: Predictor, ejemplos=None):
+def build_app(pred, ejemplos=None, cargar_imagen=None):
+    load_image = cargar_imagen or _cargar_con_pytorch
+
     def analizar(archivo, umbral):
         if archivo is None:
             return None, "Suba una imagen para analizar."
@@ -113,4 +120,5 @@ if __name__ == "__main__":
         ruta = Path(args.data_root) / "jpeg" / str(completa).split("jpeg/", 1)[1]
         if ruta.exists():
             ejemplos.append(str(ruta))
+    from inference import Predictor
     build_app(Predictor(args.run), ejemplos).launch(share=args.share)

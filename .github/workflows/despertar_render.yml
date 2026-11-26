@@ -1,0 +1,23 @@
+# Mantiene despierta la app de Gradio en Render.
+# El plan gratis de Render apaga el servicio tras 15 minutos sin visitas y tarda ~1 minuto en volver a
+# encenderlo; esta visita cada 10 minutos lo mantiene encendido (un servicio gratis tiene 750 h al mes,
+# suficientes para estar prendido todo el mes).
+name: Despertar Render
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  visitar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL: ${{ vars.RENDER_URL || 'https://mamografias-g8.onrender.com' }}
+    steps:
+      - name: Visitar la app
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 150 --retry 2 --retry-delay 30 "$URL/")
+          echo "$code $URL"
+          test "$code" = "200"
